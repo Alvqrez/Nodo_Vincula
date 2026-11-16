@@ -1,6 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  Alert,
   View,
   Text,
   TouchableOpacity,
@@ -13,9 +12,8 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import { Row, Card, Badge } from "../components";
-import { useProyectos } from "../context/ProyectosContext";
-import { getAuthToken } from "../context/AuthContext";
-import { API_BASE } from "../config/api";
+import { useDialog } from "../context/DialogContext";
+import { useWebSocket } from "../context/WebSocketContext";
 import apiClient from "../utils/apiClient";
 
 const WEEK_DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -85,25 +83,25 @@ const categorizarEvento = (tipo) => {
   return "reunion";
 };
 
-const saveCitaAPI = async (payload) => {
-  try {
-    const token = getAuthToken();
-    if (!token) return;
-    await fetch(`${API_BASE}/citas`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-  } catch (e) {
-    console.warn("No se pudo guardar la cita en BD:", e.message);
-  }
+const estadoEstilo = (estado, C) => {
+  if (estado === "Confirmada") return { color: C.green, bg: C.greenLight };
+  if (estado === "Cancelada") return { color: C.textMuted, bg: C.borderLight };
+  return { color: C.amber, bg: C.amberLight };
+};
+
+const nombreCompleto = (nombre, apellidos) =>
+  [nombre, apellidos].filter(Boolean).join(" ").trim();
+
+const ROL_ETIQUETA = {
+  residente: "Residente",
+  asesor: "Asesor",
+  jefe: "Jefe de Vinculación",
 };
 
 export default function CalendarioCitas({ usuario }) {
   const { colors: C } = useTheme();
+  const { confirm, notify } = useDialog();
+  const { subscribe } = useWebSocket() || {};
   const esResidente = usuario?.rol === "residente";
   // undefined = cargando, null = sin asesor, objeto = asesor asignado
   const [asesorResidente, setAsesorResidente] = useState(undefined);
@@ -140,9 +138,16 @@ export default function CalendarioCitas({ usuario }) {
   const [formTime, setFormTime] = useState("");
   const [formConcepto, setFormConcepto] = useState("");
   const [formNotes, setFormNotes] = useState("");
-  const [formResidente, setFormResidente] = useState("");
+  // null = cita personal ("Solo yo"); si no, usuarios.id de la persona invitada
+  const [formParticipante, setFormParticipante] = useState(null);
+  const [busquedaParticipante, setBusquedaParticipante] = useState("");
+  const [participantes, setParticipantes] = useState([]);
+  const [cargandoParticipantes, setCargandoParticipantes] = useState(true);
   const [dateError, setDateError] = useState("");
   const [timeError, setTimeError] = useState("");
+  const [conceptoError, setConceptoError] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [accionEnCurso, setAccionEnCurso] = useState(null); // id de la cita que se está actualizando
 
   // Verificar asesor si el usuario es residente
   useEffect(() => {
@@ -160,96 +165,128 @@ export default function CalendarioCitas({ usuario }) {
   }, [esResidente]);
 
   // Cargar citas SOLO desde API (no del Context)
-  useEffect(() => {
-    const fetchCitas = async () => {
-      try {
-        setLoading(true);
-        const token = getAuthToken();
-        if (!token) return;
-
-        const res = await fetch(`${API_BASE}/citas/mis-citas`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const json = await res.json();
-        if (!json.ok) {
-          console.warn("Error al cargar citas:", json.mensaje);
-          return;
-        }
-
-        // Procesar citas desde API
-        const evts = {};
-        const upcomingList = [];
-        const hoy = new Date();
-
-        json.citas.forEach((cita) => {
-          const fecha = new Date(cita.fecha_hora);
-          const key = monthKey(fecha);
-          const day = fecha.getDate();
-          const cat = categorizarEvento(cita.tipo);
-          const catColors = {
-            revision: C.amber,
-            residente: C.teal,
-            empresa: C.purple,
-            reunion: C.blue,
-          };
-          const color = catColors[cat] || C.blue;
-          const entry = {
-            label: cita.motivo,
-            color,
-            bg: color + "22",
-            tipo: cita.tipo,
-            modalidad: cita.modalidad || "Presencial",
-            categoria: cat,
-          };
-
-          if (!evts[key]) evts[key] = {};
-          if (!evts[key][day]) evts[key][day] = [];
-          evts[key][day].push(entry);
-
-          if (fecha >= hoy) {
-            upcomingList.push({
-              day,
-              month: MONTHS[fecha.getMonth()].slice(0, 3),
-              monthIndex: fecha.getMonth(),
-              year: fecha.getFullYear(),
-              title: cita.motivo,
-              time: new Date(cita.fecha_hora).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-              color,
-              bg: color + "22",
-              icon:
-                (cita.modalidad || "Presencial") === "Virtual"
-                  ? "monitor"
-                  : "map-pin",
-              tipo: cita.tipo,
-              modalidad: cita.modalidad || "Presencial",
-              categoria: cat,
-            });
-          }
-        });
-
-        upcomingList.sort(
-          (a, b) =>
-            new Date(a.year, a.monthIndex, a.day) -
-            new Date(b.year, b.monthIndex, b.day),
-        );
-        setEvents(evts);
-        setUpcoming(upcomingList);
-      } catch (err) {
-        console.error("Error al obtener citas:", err);
-      } finally {
-        setLoading(false);
+  const cargarCitas = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.get("/api/citas/mis-citas");
+      if (!res.ok || !res.body?.ok) {
+        console.warn("Error al cargar citas:", res.body?.mensaje);
+        return;
       }
-    };
 
-    fetchCitas();
+      // Procesar citas desde API
+      const evts = {};
+      const upcomingList = [];
+      const hoy = new Date();
+
+      res.body.citas.forEach((cita) => {
+        const fecha = new Date(cita.fecha_hora);
+        const key = monthKey(fecha);
+        const day = fecha.getDate();
+        const cat = categorizarEvento(cita.tipo || "");
+        const catColors = {
+          revision: C.amber,
+          residente: C.teal,
+          empresa: C.purple,
+          reunion: C.blue,
+        };
+        const estado = cita.estado || "Pendiente";
+        const cancelada = estado === "Cancelada";
+        const color = cancelada ? C.textLight : catColors[cat] || C.blue;
+        const compartida = Boolean(cita.compartida);
+        const soySolicitante = Boolean(cita.soy_solicitante);
+        const soyParticipante = Boolean(cita.soy_participante);
+        // Con quién es la cita (la otra persona), solo si es compartida
+        const con = compartida
+          ? soySolicitante
+            ? nombreCompleto(cita.participante_nombre, cita.participante_apellidos)
+            : nombreCompleto(cita.solicitante_nombre, cita.solicitante_apellidos)
+          : null;
+        const conRol = compartida
+          ? soySolicitante
+            ? cita.participante_rol
+            : cita.solicitante_rol
+          : null;
+        const time = fecha.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const entry = {
+          id: cita.id,
+          label: cita.motivo || cita.tipo,
+          color,
+          bg: color + "22",
+          tipo: cita.tipo,
+          modalidad: cita.modalidad || "Presencial",
+          categoria: cat,
+          estado,
+          compartida,
+          soySolicitante,
+          soyParticipante,
+          // La otra persona me invitó (no la creé yo)
+          meInvitaron: compartida && soyParticipante && !soySolicitante,
+          con,
+          conRol,
+          time,
+          fechaTexto: `${day} de ${MONTHS[fecha.getMonth()].toLowerCase()}, ${time}`,
+          pasada: fecha < hoy,
+        };
+
+        if (!evts[key]) evts[key] = {};
+        if (!evts[key][day]) evts[key][day] = [];
+        evts[key][day].push(entry);
+
+        if (fecha >= hoy && !cancelada) {
+          upcomingList.push({
+            ...entry,
+            day,
+            month: MONTHS[fecha.getMonth()].slice(0, 3),
+            monthIndex: fecha.getMonth(),
+            year: fecha.getFullYear(),
+            title: entry.label,
+            icon: entry.modalidad === "Virtual" ? "monitor" : "map-pin",
+            timestamp: fecha.getTime(),
+          });
+        }
+      });
+
+      upcomingList.sort((a, b) => a.timestamp - b.timestamp);
+      setEvents(evts);
+      setUpcoming(upcomingList);
+    } catch (err) {
+      console.error("Error al obtener citas:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [C]);
+
+  useEffect(() => {
+    cargarCitas();
+  }, [cargarCitas]);
+
+  // Personas que este usuario puede invitar (el servidor aplica la regla por rol)
+  useEffect(() => {
+    let activo = true;
+    apiClient.get("/api/citas/participantes").then((res) => {
+      if (!activo) return;
+      setParticipantes(res.ok && res.body?.ok ? res.body.participantes || [] : []);
+      setCargandoParticipantes(false);
+    });
+    return () => {
+      activo = false;
+    };
   }, []);
+
+  // Tiempo real: invitaciones nuevas y cambios de estado hechos por la otra persona
+  useEffect(() => {
+    if (!subscribe) return undefined;
+    const off1 = subscribe("cita_nueva", () => cargarCitas());
+    const off2 = subscribe("cita_actualizada", () => cargarCitas());
+    return () => {
+      off1();
+      off2();
+    };
+  }, [subscribe, cargarCitas]);
 
   const monthName = `${MONTHS[monthDate.getMonth()]} ${monthDate.getFullYear()}`;
   const currentEvents = events[monthKey(monthDate)] || {};
@@ -292,12 +329,63 @@ export default function CalendarioCitas({ usuario }) {
     setFormTime("");
     setFormNotes("");
     setFormConcepto("");
-    setFormResidente("");
+    setFormParticipante(null);
+    setBusquedaParticipante("");
     setFormType("Asesoría");
     setFormModalidad("Presencial");
     setDateError("");
     setTimeError("");
+    setConceptoError("");
     setShowModal(true);
+  };
+
+  const participanteSeleccionado = useMemo(
+    () => participantes.find((p) => p.id === formParticipante) || null,
+    [participantes, formParticipante],
+  );
+
+  const participantesFiltrados = useMemo(() => {
+    const q = busquedaParticipante.trim().toLowerCase();
+    if (!q) return participantes;
+    return participantes.filter((p) =>
+      `${p.nombre} ${p.contexto || ""}`.toLowerCase().includes(q),
+    );
+  }, [participantes, busquedaParticipante]);
+
+  // Confirmar o cancelar una cita existente
+  const cambiarEstado = async (ev, estado) => {
+    if (estado === "Cancelada") {
+      const ok = await confirm({
+        title: "Cancelar cita",
+        message: ev.con
+          ? `Se cancelará "${ev.label}" (${ev.fechaTexto}). ${ev.con} recibirá un aviso.`
+          : `Se cancelará "${ev.label}" (${ev.fechaTexto}).`,
+        confirmLabel: "Cancelar cita",
+        cancelLabel: "Volver",
+        destructive: true,
+      });
+      if (!ok) return;
+    }
+
+    setAccionEnCurso(ev.id);
+    const res = await apiClient.patch(`/api/citas/${ev.id}`, { estado });
+    setAccionEnCurso(null);
+
+    if (res.ok && res.body?.ok) {
+      notify({
+        type: "success",
+        title: estado === "Confirmada" ? "Cita confirmada" : "Cita cancelada",
+        message: ev.con ? `Se avisó a ${ev.con}.` : "",
+      });
+      cargarCitas();
+    } else {
+      notify({
+        type: "error",
+        title: "No se pudo actualizar la cita",
+        message:
+          res.body?.mensaje || "Revisa tu conexión e intenta de nuevo.",
+      });
+    }
   };
 
   const handleDateChange = (raw) => {
@@ -316,7 +404,88 @@ export default function CalendarioCitas({ usuario }) {
     else setTimeError("");
   };
 
-  const confirmAppointment = () => {
+  // Con quién es la cita, su estado y las acciones disponibles para este usuario
+  const renderDetalleCita = (ev) => {
+    const est = estadoEstilo(ev.estado, C);
+    const puedeConfirmar =
+      ev.meInvitaron && ev.estado === "Pendiente" && !ev.pasada;
+    const puedeCancelar = ev.estado !== "Cancelada" && !ev.pasada;
+    const ocupado = accionEnCurso === ev.id;
+    const rol = ev.conRol ? ROL_ETIQUETA[ev.conRol] || ev.conRol : "";
+
+    return (
+      <View style={{ marginTop: 6, marginLeft: 18, gap: 8 }}>
+        <Row style={{ alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <Feather
+            name={ev.con ? "users" : "user"}
+            size={11}
+            color={C.textMuted}
+          />
+          <Text style={{ fontSize: 11, color: C.textSub, flexShrink: 1 }}>
+            {ev.con
+              ? `${ev.meInvitaron ? "Te invitó" : "Con"} ${ev.con}${rol ? ` · ${rol}` : ""}`
+              : "Solo en tu calendario"}
+          </Text>
+          <Badge text={ev.estado} color={est.color} bg={est.bg} />
+        </Row>
+        {(puedeConfirmar || puedeCancelar) && (
+          <Row style={{ gap: 8, flexWrap: "wrap" }}>
+            {puedeConfirmar && (
+              <TouchableOpacity
+                onPress={() => cambiarEstado(ev, "Confirmada")}
+                disabled={ocupado}
+                accessibilityRole="button"
+                accessibilityLabel={`Confirmar la cita ${ev.label}`}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 5,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 8,
+                  backgroundColor: C.teal,
+                  opacity: ocupado ? 0.6 : 1,
+                }}
+              >
+                <Feather name="check" size={12} color="white" />
+                <Text style={{ fontSize: 12, fontWeight: "700", color: "white" }}>
+                  Confirmar
+                </Text>
+              </TouchableOpacity>
+            )}
+            {puedeCancelar && (
+              <TouchableOpacity
+                onPress={() => cambiarEstado(ev, "Cancelada")}
+                disabled={ocupado}
+                accessibilityRole="button"
+                accessibilityLabel={`Cancelar la cita ${ev.label}`}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 5,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: C.red,
+                  backgroundColor: C.card,
+                  opacity: ocupado ? 0.6 : 1,
+                }}
+              >
+                <Feather name="x" size={12} color={C.red} />
+                <Text style={{ fontSize: 12, fontWeight: "700", color: C.red }}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+            )}
+          </Row>
+        )}
+      </View>
+    );
+  };
+
+  const confirmAppointment = async () => {
+    if (guardando) return;
     const date = validateDate(formDate);
 
     // Validar fecha
@@ -328,6 +497,7 @@ export default function CalendarioCitas({ usuario }) {
     // Limpiar errores previos
     setDateError("");
     setTimeError("");
+    setConceptoError("");
 
     // Bloquear fechas pasadas
     const hoy = new Date();
@@ -349,7 +519,7 @@ export default function CalendarioCitas({ usuario }) {
 
     // Validar concepto
     if (!formConcepto.trim()) {
-      Alert.alert("Error", "Ingresa el concepto de la cita.");
+      setConceptoError("Ingresa el concepto de la cita.");
       return;
     }
 
@@ -373,76 +543,34 @@ export default function CalendarioCitas({ usuario }) {
 
     const title = formConcepto.trim();
 
-    const key = monthKey(new Date(year, month, 1));
-
-    // Categoría
-    const cat = categorizarEvento(formType);
-
-    const catColors = {
-      revision: C.amber,
-      residente: C.teal,
-      empresa: C.purple,
-      reunion: C.blue,
-    };
-
-    const color = catColors[cat] || C.teal;
-
     // Fecha local SIN problemas de timezone
     const fechaHoraLocal =
       `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")} ` +
       `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`;
 
-    // Guardar en API
-    saveCitaAPI({
+    // Guardar en API (el servidor valida a quién se puede invitar)
+    setGuardando(true);
+    const res = await apiClient.post("/api/citas", {
       tipo: formType,
       modalidad: formModalidad,
       motivo: title,
       notas: formNotes.trim() || null,
-      residente: formResidente.trim() || null,
+      participante_id: formParticipante || undefined,
       fecha_hora: fechaHoraLocal,
     });
+    setGuardando(false);
 
-    // Guardar en calendario local
-    setEvents((prev) => ({
-      ...prev,
-      [key]: {
-        ...(prev[key] || {}),
-        [day]: [
-          ...(prev[key]?.[day] || []),
-          {
-            label: title,
-            color,
-            bg: color + "22",
-            tipo: formType,
-            modalidad: formModalidad,
-            categoria: cat,
-            timestamp: date.getTime(),
-          },
-        ],
-      },
-    }));
+    if (!res.ok || !res.body?.ok) {
+      notify({
+        type: "error",
+        title: "No se pudo agendar la cita",
+        message: res.body?.mensaje || "Revisa tu conexión e intenta de nuevo.",
+      });
+      return;
+    }
 
-    // Guardar en próximos eventos
-    setUpcoming((prev) =>
-      [
-        ...prev,
-        {
-          day,
-          month: MONTHS[month].slice(0, 3),
-          monthIndex: month,
-          year,
-          title,
-          time: formTime,
-          color,
-          bg: color + "22",
-          icon: formModalidad === "Virtual" ? "monitor" : "map-pin",
-          tipo: formType,
-          modalidad: formModalidad,
-          categoria: cat,
-          timestamp: date.getTime(),
-        },
-      ].sort((a, b) => a.timestamp - b.timestamp),
-    );
+    // Recargar desde el servidor para mostrar la cita tal como quedó guardada
+    await cargarCitas();
 
     // Actualizar calendario
     setMonthDate(new Date(year, month, 1));
@@ -451,10 +579,13 @@ export default function CalendarioCitas({ usuario }) {
     // Cerrar modal
     setShowModal(false);
 
-    Alert.alert(
-      "Cita agendada",
-      `"${title}" — ${formModalidad} (${formDate} ${formTime})`,
-    );
+    notify({
+      type: "success",
+      title: "Cita agendada",
+      message: participanteSeleccionado
+        ? `"${title}" · ${formModalidad} · ${formDate} ${formTime}. Se envió la invitación a ${participanteSeleccionado.nombre}.`
+        : `"${title}" · ${formModalidad} · ${formDate} ${formTime}.`,
+    });
   };
 
   // ── Bloquear si el residente no tiene asesor asignado ────────────────────
@@ -774,7 +905,7 @@ export default function CalendarioCitas({ usuario }) {
               {currentEvents[selected] ? (
                 currentEvents[selected].map((ev, i) => (
                   <View
-                    key={i}
+                    key={ev.id ?? i}
                     style={{
                       backgroundColor: ev.bg || ev.color + "22",
                       borderRadius: 9,
@@ -823,9 +954,11 @@ export default function CalendarioCitas({ usuario }) {
                         }}
                       >
                         {ev.tipo}
+                        {ev.time ? ` · ${ev.time}` : ""}
                         {ev.proyecto ? ` · ${ev.proyecto}` : ""}
                       </Text>
                     )}
+                    {renderDetalleCita(ev)}
                   </View>
                 ))
               ) : (
@@ -881,7 +1014,7 @@ export default function CalendarioCitas({ usuario }) {
               <View style={{ gap: 10 }}>
                 {filteredUpcoming.slice(0, 8).map((ev, i) => (
                   <TouchableOpacity
-                    key={i}
+                    key={ev.id ?? i}
                     onPress={() => {
                       setMonthDate(new Date(ev.year, ev.monthIndex, 1));
                       setSelected(ev.day);
@@ -971,12 +1104,37 @@ export default function CalendarioCitas({ usuario }) {
                               : C.tealLight
                           }
                         />
+                        <Badge
+                          text={ev.estado}
+                          color={estadoEstilo(ev.estado, C).color}
+                          bg={estadoEstilo(ev.estado, C).bg}
+                        />
                         {ev.proyecto && (
                           <Text style={{ fontSize: 9, color: C.textMuted }}>
                             {ev.proyecto}
                           </Text>
                         )}
                       </Row>
+                      {ev.con ? (
+                        <Text
+                          numberOfLines={1}
+                          style={{ fontSize: 10, color: C.textSub, marginTop: 4 }}
+                        >
+                          {ev.meInvitaron ? "Te invitó" : "Con"} {ev.con}
+                        </Text>
+                      ) : null}
+                      {ev.meInvitaron && ev.estado === "Pendiente" ? (
+                        <Text
+                          style={{
+                            fontSize: 10,
+                            fontWeight: "700",
+                            color: C.amber,
+                            marginTop: 2,
+                          }}
+                        >
+                          Falta tu confirmación
+                        </Text>
+                      ) : null}
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -1161,39 +1319,147 @@ export default function CalendarioCitas({ usuario }) {
               <Text style={labelStyle}>Concepto de la cita *</Text>
               <TextInput
                 value={formConcepto}
-                onChangeText={setFormConcepto}
+                onChangeText={(v) => {
+                  setFormConcepto(v);
+                  if (conceptoError) setConceptoError("");
+                }}
                 placeholder="Ej: Revisión de avances del Sprint 2"
                 placeholderTextColor={C.textLight}
+                maxLength={200}
                 style={{
                   padding: 10,
                   borderRadius: 9,
                   borderWidth: 1,
-                  borderColor: C.border,
+                  borderColor: conceptoError ? C.red : C.border,
                   fontSize: 13,
                   color: C.text,
                   backgroundColor: C.bg,
-                  marginBottom: 14,
+                  marginBottom: conceptoError ? 4 : 14,
                 }}
               />
+              {conceptoError ? (
+                <Text style={{ fontSize: 11, color: C.red, marginBottom: 12 }}>
+                  {conceptoError}
+                </Text>
+              ) : null}
 
-              {/* Residente */}
-              <Text style={labelStyle}>Residente (opcional)</Text>
-              <TextInput
-                value={formResidente}
-                onChangeText={setFormResidente}
-                placeholder="Nombre del residente"
-                placeholderTextColor={C.textLight}
+              {/* Participante */}
+              <Text style={labelStyle}>Con quién</Text>
+              {participantes.length > 6 && (
+                <Row
+                  style={{
+                    alignItems: "center",
+                    borderWidth: 1,
+                    borderColor: C.border,
+                    borderRadius: 9,
+                    paddingHorizontal: 12,
+                    gap: 8,
+                    backgroundColor: C.bg,
+                    marginBottom: 8,
+                  }}
+                >
+                  <Feather name="search" size={13} color={C.textMuted} />
+                  <TextInput
+                    value={busquedaParticipante}
+                    onChangeText={setBusquedaParticipante}
+                    placeholder="Buscar por nombre, carrera o número de control"
+                    placeholderTextColor={C.textLight}
+                    accessibilityLabel="Buscar persona para invitar"
+                    style={{
+                      flex: 1,
+                      paddingVertical: 9,
+                      fontSize: 13,
+                      color: C.text,
+                    }}
+                  />
+                </Row>
+              )}
+              <View
                 style={{
-                  padding: 10,
-                  borderRadius: 9,
                   borderWidth: 1,
                   borderColor: C.border,
-                  fontSize: 13,
-                  color: C.text,
-                  backgroundColor: C.bg,
-                  marginBottom: 14,
+                  borderRadius: 9,
+                  marginBottom: 6,
+                  overflow: "hidden",
                 }}
-              />
+              >
+                <ScrollView
+                  style={{ maxHeight: 220 }}
+                  nestedScrollEnabled
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {[{ id: null, nombre: "Solo yo", contexto: "Queda solo en tu calendario" }]
+                    .concat(participantesFiltrados)
+                    .map((p, idx) => {
+                      const activo = formParticipante === p.id;
+                      return (
+                        <TouchableOpacity
+                          key={p.id ?? "solo-yo"}
+                          onPress={() => setFormParticipante(p.id)}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: activo }}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 10,
+                            paddingHorizontal: 12,
+                            paddingVertical: 9,
+                            backgroundColor: activo ? C.tealLight : C.card,
+                            borderTopWidth: idx === 0 ? 0 : 1,
+                            borderTopColor: C.borderLight,
+                          }}
+                        >
+                          <Feather
+                            name={activo ? "check-circle" : "circle"}
+                            size={14}
+                            color={activo ? C.teal : C.textLight}
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text
+                              style={{
+                                fontSize: 13,
+                                fontWeight: activo ? "700" : "500",
+                                color: C.text,
+                              }}
+                              numberOfLines={1}
+                            >
+                              {p.nombre}
+                            </Text>
+                            {p.contexto ? (
+                              <Text
+                                style={{ fontSize: 11, color: C.textMuted }}
+                                numberOfLines={1}
+                              >
+                                {p.contexto}
+                              </Text>
+                            ) : null}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  {busquedaParticipante.trim() &&
+                    participantesFiltrados.length === 0 && (
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          color: C.textMuted,
+                          padding: 12,
+                        }}
+                      >
+                        Nadie coincide con "{busquedaParticipante.trim()}".
+                      </Text>
+                    )}
+                </ScrollView>
+              </View>
+              <Text style={{ fontSize: 11, color: C.textMuted, marginBottom: 14 }}>
+                {cargandoParticipantes
+                  ? "Cargando personas que puedes invitar…"
+                  : participanteSeleccionado
+                    ? `${participanteSeleccionado.nombre} recibirá un aviso y podrá confirmar o cancelar la cita.`
+                    : participantes.length === 0
+                      ? "No tienes personas vinculadas para invitar; la cita quedará solo en tu calendario."
+                      : "Elige a quién invitar o deja la cita solo en tu calendario."}
+              </Text>
 
               {/* Fecha */}
               <Text style={labelStyle}>Fecha</Text>
@@ -1330,6 +1596,9 @@ export default function CalendarioCitas({ usuario }) {
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={confirmAppointment}
+                  disabled={guardando}
+                  accessibilityRole="button"
+                  accessibilityState={{ busy: guardando, disabled: guardando }}
                   style={{
                     flex: 2,
                     backgroundColor: C.teal,
@@ -1339,13 +1608,22 @@ export default function CalendarioCitas({ usuario }) {
                     flexDirection: "row",
                     justifyContent: "center",
                     gap: 7,
+                    opacity: guardando ? 0.7 : 1,
                   }}
                 >
-                  <Feather name="check" size={14} color="white" />
+                  <Feather
+                    name={guardando ? "loader" : "check"}
+                    size={14}
+                    color="white"
+                  />
                   <Text
                     style={{ color: "white", fontWeight: "700", fontSize: 13 }}
                   >
-                    Confirmar cita
+                    {guardando
+                      ? "Guardando…"
+                      : formParticipante
+                        ? "Agendar y enviar invitación"
+                        : "Confirmar cita"}
                   </Text>
                 </TouchableOpacity>
               </Row>

@@ -54,13 +54,27 @@ const SECTION_META = {
     ],
   },
   fuentes: {
-    desc: "Validar fuentes",
+    desc: "Validar la fuente de cada proyecto",
     keywords: [
       "fuentes",
+      "fuente",
       "validar",
-      "verificar",
-      "referencias",
-      "bibliografía",
+      "rechazar",
+      "banco de proyectos",
+      "propuesta propia",
+      "empresa",
+    ],
+  },
+  "fuente-proyecto": {
+    desc: "De dónde proviene tu proyecto",
+    keywords: [
+      "fuente",
+      "fuente del proyecto",
+      "origen",
+      "banco de proyectos",
+      "propuesta propia",
+      "empresa",
+      "validación",
     ],
   },
   seguimiento: {
@@ -92,7 +106,7 @@ const SECTION_META = {
     ],
   },
   utilerias: {
-    desc: "Perfil y configuración",
+    desc: "Perfil, configuración y documentos",
     keywords: [
       "utilería",
       "perfil",
@@ -102,6 +116,10 @@ const SECTION_META = {
       "foto",
       "usuario",
       "contraseña",
+      "recursos",
+      "documentos",
+      "formatos",
+      "guías",
     ],
   },
   "reporte-preliminar": {

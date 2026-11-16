@@ -1,0 +1,64 @@
+@reference "../index.css";
+
+/* ── Tokens de tinta sin fondo: texto claro sobre la banda oscura del héroe ── */
+.on-ink {
+  --color-sheet: #191C22; --color-tray: #14161A; --color-raised: #20242C;
+  --color-ink: #F3EFE6; --color-ink-2: #B0B4BD; --color-ink-3: #858B96;
+  --color-rule: #30343D; --color-rule-strong: #454A55;
+  --color-signal-ink: #FF7847;
+  color: var(--color-ink);
+}
+
+/* ── Banda "amanecer": tinta → óxido → señal → durazno → papel (claro);
+      en oscuro termina en un horizonte de brasa que se funde con la tinta ── */
+.sunrise {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(70% 55% at 72% 100%, rgb(255 122 46 / .55), transparent 70%),
+    linear-gradient(180deg, #0E1014 0%, #15110F 34%, #3C1607 54%, #9C3510 68%, #F2541C 79%, #FF9A68 88%, #FFC9A3 94%, var(--color-ground) 100%);
+}
+[data-theme="dark"] .sunrise {
+  background:
+    radial-gradient(60% 38% at 70% 100%, rgb(255 90 31 / .42), transparent 72%),
+    radial-gradient(40% 22% at 70% 100%, rgb(255 154 104 / .28), transparent 70%),
+    linear-gradient(180deg, #0E1014 0%, #110F0F 46%, #241008 70%, #3A1407 84%, #0E1014 100%);
+}
+/* Grano propio de la banda: capa FIJA recortada por la banda (no repinta al desplazar) */
+.sunrise-clip { clip-path: inset(0); }
+.sunrise-grain {
+  position: fixed; inset: 0; pointer-events: none; opacity: .2; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── Menú móvil: enlaces que suben desde una máscara, escalonados ── */
+.menu-link { display: block; overflow: hidden; }
+.menu-link > span { display: block; transform: translateY(110%); opacity: 0;
+  transition: transform 700ms var(--ease-expo), opacity 500ms var(--ease-expo); transition-delay: calc(var(--i) * 60ms + 120ms); }
+.menu-open .menu-link > span { transform: none; opacity: 1; }
+.menu-overlay { opacity: 0; pointer-events: none; transition: opacity 400ms var(--ease-expo); }
+.menu-open.menu-overlay { opacity: 1; pointer-events: auto; }
+
+/* Hamburguesa → X (las líneas giran y se trasladan, no desaparecen) */
+.burger span { position: absolute; left: 50%; width: 18px; height: 1.5px; background: currentColor; transform-origin: center;
+  transition: transform 450ms var(--ease-expo); }
+.burger span:nth-child(1) { transform: translate(-50%, -4px); }
+.burger span:nth-child(2) { transform: translate(-50%, 4px); }
+.burger[aria-expanded="true"] span:nth-child(1) { transform: translate(-50%, 0) rotate(45deg); }
+.burger[aria-expanded="true"] span:nth-child(2) { transform: translate(-50%, 0) rotate(-45deg); }
+
+/* ── Acordeón: altura suave con grid-template-rows (0fr → 1fr) ── */
+.acc { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 450ms var(--ease-expo); }
+.acc[data-open="true"] { grid-template-rows: 1fr; }
+.acc > div { overflow: hidden; }
+
+/* Cambio de pestaña */
+@keyframes tab-in { from { opacity: 0; transform: translateY(8px); } }
+.tab-in { animation: tab-in 420ms var(--ease-expo) both; }
+
+/* Anillo NODO gigante del capítulo */
+.giant-ring { animation: vin-draw 1.8s var(--ease-nodo) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-link > span { transform: none; opacity: 1; }
+}

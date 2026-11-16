@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Alert,
   Modal,
   Pressable,
   View,
@@ -10,9 +9,9 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import { useDialog } from "../context/DialogContext";
 import { Row, Card, StatCard, Badge, ProgressBar } from "../components";
 import { useReportes } from "../context/ReportesContext";
-import { useNotificaciones } from "../context/NotificacionesContext";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const statusStyle = (status, C) =>
@@ -22,20 +21,12 @@ const statusStyle = (status, C) =>
     Pendiente: { color: C.amber, bg: C.amberLight },
     Entregado: { color: C.blue, bg: C.blueLight },
   })[status] || { color: C.textMuted, bg: C.bg };
-const todayStr = () => {
-  const d = new Date();
-  return d.toLocaleDateString("es-MX", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-};
 
-export default function Seguimiento() {
+export default function Seguimiento({ onNavigate }) {
   const { colors: C } = useTheme();
-  const { reports, updateReport, preliminarAprobado, finalDesbloqueado } =
+  const { notify } = useDialog();
+  const { reports, preliminarAprobado, finalDesbloqueado } =
     useReportes() || {};
-  const { setNotifications } = useNotificaciones() || {};
   const [selected, setSelected] = useState(null);
   const [viewingReport, setViewing] = useState(null);
 
@@ -49,37 +40,15 @@ export default function Seguimiento() {
   ).length;
 
   // ── Actions ───────────────────────────────────────────────────────────────
-  const deliverReport = (id) => {
-    const report = reports?.find((r) => r.id === id);
-    updateReport(id, { status: "Pendiente", submitted: todayStr() });
-
-    if (setNotifications) {
-      setNotifications((prev) => [
-        {
-          id: Date.now(),
-          icon: "file-text",
-          iconBg: C.blueLight,
-          iconColor: C.blue,
-          title: `Nuevo reporte entregado: ${report?.title || "Reporte"}`,
-          body: "Un residente ha entregado un reporte que requiere tu revisión.",
-          time: "Ahora",
-          unread: true,
-          type: "Reporte",
-          typeBg: C.blueLight,
-          typeColor: C.blue,
-          proyecto: "App de Logística Interna",
-          fase: "desarrollo",
-          actionScreen: "seguimiento",
-          actionLabel: "Revisar reporte",
-        },
-        ...(prev || []),
-      ]);
-    }
-
-    Alert.alert(
-      "Reporte entregado",
-      "Queda pendiente de revisión por tu asesor.",
-    );
+  // La entrega real (archivo + servidor) vive en la pantalla de cada reporte;
+  // desde aquí solo se lleva al residente a ella.
+  const pantallaDeEntrega = (id) => {
+    if (id === "preliminar") return "reporte-preliminar";
+    if (id === "final") return "reporte-final";
+    return "reportes-parciales";
+  };
+  const goToDelivery = (id) => {
+    if (onNavigate) onNavigate(pantallaDeEntrega(id));
   };
 
   const exportReports = () => {
@@ -93,7 +62,12 @@ export default function Seguimiento() {
     if (globalThis?.window?.open) {
       const win = globalThis.window.open("", "_blank");
       if (!win) {
-        Alert.alert("Exportar", "Permite ventanas emergentes.");
+        notify({
+          type: "warning",
+          title: "Exportar",
+          message:
+            "El navegador bloqueó la ventana. Permite ventanas emergentes para este sitio e intenta de nuevo.",
+        });
         return;
       }
       win.document.write(html);
@@ -101,7 +75,11 @@ export default function Seguimiento() {
       win.focus();
       win.print();
     } else {
-      Alert.alert("Exportar", "Disponible en la versión web.");
+      notify({
+        type: "info",
+        title: "Exportar",
+        message: "Disponible en la versión web.",
+      });
     }
   };
 
@@ -281,10 +259,13 @@ export default function Seguimiento() {
                 </Text>
               </TouchableOpacity>
               {canDeliver &&
+                onNavigate &&
                 report.status === "Pendiente" &&
                 !report.submitted && (
                   <TouchableOpacity
-                    onPress={() => deliverReport(report.id)}
+                    onPress={() => goToDelivery(report.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ir a entregar ${report.title || "el reporte"}`}
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
@@ -303,7 +284,7 @@ export default function Seguimiento() {
                         fontWeight: "700",
                       }}
                     >
-                      Entregar
+                      Ir a entregar
                     </Text>
                   </TouchableOpacity>
                 )}

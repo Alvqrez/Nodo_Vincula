@@ -19,6 +19,7 @@ import { useWebSocket } from "../context/WebSocketContext";
 
 const PRIORIDADES = ["Alta", "Media", "Baja"];
 const FASES = [
+  { id: "propuesto", label: "Propuesto" },
   { id: "desarrollo", label: "En Desarrollo" },
   { id: "revision", label: "En Revisión" },
   { id: "concluido", label: "Concluido" },
@@ -319,6 +320,12 @@ export default function GestionProyectos() {
   const { colors: C } = useTheme();
 
   const PHASE_COLUMNS = [
+    {
+      id: "propuesto",
+      label: "Propuesto",
+      color: C.blue,
+      bg: C.blueLight,
+    },
     {
       id: "desarrollo",
       label: "En Desarrollo",

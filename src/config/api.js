@@ -14,7 +14,10 @@
  *   Mac/Linux: ifconfig | grep "inet "
  */
 
-import { REACT_APP_API_URL } from "@env";
+import { REACT_APP_API_URL, REACT_APP_NODO_URL } from "@env";
+
+// NODO (cuenta compartida): su página /app/vincula emite el código de un solo uso.
+const NODO_URL = (REACT_APP_NODO_URL || "https://nodo-tecnologico.vercel.app").replace(/\/+$/, "");
 
 const isDevelopment = process.env.NODE_ENV === "development";
 
@@ -76,6 +79,7 @@ const checkApiHealth = async () => {
 };
 
 export {
+  NODO_URL,
   API_BASE,
   WS_BASE,
   checkApiHealth,

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>NODO Vincula · Residencias profesionales del Tec de Veracruz</title>
+    <meta name="description" content="NODO Vincula reúne el proceso de residencias profesionales del Instituto Tecnológico de Veracruz: entregas de reportes, revisiones del asesor, citas, fechas del período y seguimiento de la Jefatura de Vinculación." />
+    <meta name="theme-color" content="#F3EFE6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0E1014" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_MX" />
+    <meta property="og:site_name" content="NODO Vincula" />
+    <meta property="og:title" content="NODO Vincula · Residencias profesionales del Tec de Veracruz" />
+    <meta property="og:description" content="Entregas, revisiones, citas y fechas del período en un solo expediente para residentes, asesores y Vinculación." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      // Tema antes del primer pintado: elección guardada o, si no hay, la del sistema.
+      (function () {
+        var d = document.documentElement
+        d.classList.add('js')
+        var saved = null
+        try { saved = localStorage.getItem('nodo-vincula.theme') } catch (e) {}
+        var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
+        d.setAttribute('data-theme', dark ? 'dark' : 'light')
+      })()
+    </script>
+  </head>
+  <body>
+    <noscript>NODO Vincula necesita JavaScript para mostrarse.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -14,6 +14,7 @@ import Notificaciones from "../../screens/Notificaciones";
 import CalendarioCitas from "../../screens/CalendarioCitas";
 import EstadisticasPeriodo from "../../screens/EstadisticasPeriodo";
 import AdminSistema from "../jefe/AdminSistema";
+import ValidacionFuentes from "../../screens/ValidacionFuentes";
 
 const NAV = [
   { id: "dashboard", label: "Dashboard", icon: "grid" },
@@ -21,6 +22,7 @@ const NAV = [
   { id: "proyectos", label: "Proyectos", icon: "folder" },
   { id: "asignacion", label: "Asignación", icon: "user-plus" },
   { id: "seguimiento", label: "Seguimiento", icon: "file-text" },
+  { id: "fuentes", label: "Fuentes", icon: "check-square" },
   { id: "estadisticas", label: "Estadísticas", icon: "bar-chart" },
   { id: "notificaciones", label: "Notificaciones", icon: "bell" },
   { id: "calendario", label: "Calendario", icon: "calendar" },
@@ -64,6 +66,7 @@ export default function JefeApp({ usuario, onLogout }) {
     proyectos: <GestionProyectos />,
     asignacion: <AsignacionJefe />,
     seguimiento: <SeguimientoJefe />,
+    fuentes: <ValidacionFuentes />,
     estadisticas: <EstadisticasPeriodo />,
     notificaciones: <Notificaciones onNavigate={navigateTo} />,
     calendario: <CalendarioCitas />,

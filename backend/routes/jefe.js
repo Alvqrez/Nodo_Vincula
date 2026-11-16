@@ -230,7 +230,7 @@ router.get("/proyectos", ...soloJefe, async (req, res) => {
        LEFT JOIN usuarios u ON a.usuario_id = u.id
        LEFT JOIN residentes res ON p.residente_id = res.id
        LEFT JOIN usuarios ur ON res.usuario_id = ur.id
-       WHERE LOWER(p.estado) IN ('desarrollo','revision','concluido')
+       WHERE LOWER(p.estado) IN ('propuesto','desarrollo','revision','concluido')
        ORDER BY p.created_at DESC`,
     );
     return res.json({ ok: true, proyectos: rows });
@@ -417,32 +417,49 @@ const assignAsesoresToProyecto = async (proyectoId, asesorIds) => {
   }
 };
 
-const createReportesForResidentes = async (residentesIds) => {
-  const tiposReportes = [
-    "preliminar",
-    "parcial1",
-    "parcial2",
-    "parcial3",
-    "final",
-  ];
-  const fechasLimite = [
-    "2026-02-28",
-    "2026-04-30",
-    "2026-06-30",
-    "2026-08-30",
-    "2026-10-31",
-  ];
+// ── Fechas límite de reportes por período ─────────────────────────────────────
+// [tipo de reporte, columna en periodos, nombre para mensajes]
+const FECHAS_REPORTE = [
+  ["preliminar", "fecha_preliminar", "Reporte preliminar"],
+  ["parcial1", "fecha_parcial1", "Reporte parcial 1"],
+  ["parcial2", "fecha_parcial2", "Reporte parcial 2"],
+  ["parcial3", "fecha_parcial3", "Reporte parcial 3"],
+  ["final", "fecha_final", "Reporte final"],
+];
+
+// proyectos.periodo guarda el id del período (seed y asignación) o, en
+// proyectos registrados a mano, su nombre (ej. "Ene-Jun 2026").
+// Se busca primero por id y, si no hay, por nombre.
+const obtenerFechasPeriodo = async (periodo) => {
+  if (!periodo) return null;
+  const [rows] = await db.execute(
+    `SELECT ${FECHAS_REPORTE.map(
+      ([, col]) => `DATE_FORMAT(${col}, '%Y-%m-%d') AS ${col}`,
+    ).join(", ")}
+     FROM periodos
+     WHERE id = ? OR nombre = ?
+     ORDER BY (id = ?) DESC
+     LIMIT 1`,
+    [periodo, periodo, periodo],
+  );
+  return rows[0] || null;
+};
+
+const createReportesForResidentes = async (residentesIds, periodo) => {
+  // Sin período o sin fechas definidas, fecha_limite queda NULL ("Por definir").
+  const fechasPeriodo = await obtenerFechasPeriodo(periodo);
 
   for (const rId of residentesIds) {
-    for (let i = 0; i < tiposReportes.length; i++) {
+    for (let i = 0; i < FECHAS_REPORTE.length; i++) {
+      const [tipo, col] = FECHAS_REPORTE[i];
       const [existing] = await db.execute(
         "SELECT id FROM reportes WHERE residente_id = ? AND tipo = ?",
-        [rId, tiposReportes[i]],
+        [rId, tipo],
       );
       if (existing.length === 0) {
         await db.execute(
           `INSERT INTO reportes (id, residente_id, tipo, fecha_limite, estado) VALUES (?, ?, ?, ?, 'Pendiente')`,
-          [`REP-${rId}-${i + 1}`, rId, tiposReportes[i], fechasLimite[i]],
+          [`REP-${rId}-${i + 1}`, rId, tipo, fechasPeriodo?.[col] || null],
         );
       }
     }
@@ -489,7 +506,15 @@ router.post("/asignacion", ...soloJefe, async (req, res) => {
 
     await assignResidentesToAsesor(req.body.residentesIds, asesorIdPrimario);
     await assignAsesoresToProyecto(proyectoId, asesorIds);
-    await createReportesForResidentes(req.body.residentesIds);
+    // El período se lee del proyecto ya guardado (sirve para proyecto nuevo o existente)
+    const [[proyectoAsignado]] = await db.execute(
+      "SELECT periodo FROM proyectos WHERE id = ?",
+      [proyectoId],
+    );
+    await createReportesForResidentes(
+      req.body.residentesIds,
+      proyectoAsignado?.periodo || null,
+    );
 
     logger.logAudit("ASIGNACION_PROYECTO", req.user.id, proyectoId, {
       asesorIdPrimario,
@@ -598,19 +623,35 @@ router.put("/proyectos/:id/aprobar-avance", ...soloJefe, async (req, res) => {
   }
 });
 
+// ── Fuentes del proyecto (el residente las declara en /api/fuentes) ───────────
+const {
+  notificarSinBloquear: notificarFuente,
+} = require("../utils/notificacionPersistente");
+
 // ── GET /api/jefe/fuentes ─────────────────────────────────────────────────────
+// Campos originales + numControl, fechaRevision y revisadoPor (aditivos).
 router.get("/fuentes", ...soloJefe, async (req, res) => {
   try {
     const [rows] = await db.execute(
       `SELECT f.id, CONCAT(u.nombre,' ',u.apellidos) AS nombre,
-              r.carrera, f.tipo AS tipoFuente, f.descripcion AS fuenteDeclarada,
-              f.estado, f.observaciones AS motivoRechazo
+              r.carrera, r.num_control AS numControl,
+              f.tipo AS tipoFuente, f.descripcion AS fuenteDeclarada,
+              f.estado, f.observaciones AS motivoRechazo,
+              f.fecha_revision AS fechaRevision,
+              CONCAT(ur.nombre,' ',ur.apellidos) AS revisadoPor
        FROM fuentes_informacion f
        JOIN residentes r ON f.residente_id = r.id
        JOIN usuarios u ON r.usuario_id = u.id
-       ORDER BY f.id ASC`,
+       LEFT JOIN usuarios ur ON f.revisado_por = ur.id
+       ORDER BY FIELD(f.estado,'Pendiente','Rechazada','Validada'), f.id DESC`,
     );
-    return res.json({ ok: true, fuentes: rows });
+    const fuentes = rows.map((f) => ({
+      ...f,
+      fechaRevision: f.fechaRevision
+        ? new Date(f.fechaRevision).toISOString().split("T")[0]
+        : null,
+    }));
+    return res.json({ ok: true, fuentes });
   } catch (err) {
     console.error("Error en GET /jefe/fuentes:", err);
     return res.status(500).json({ ok: false, mensaje: "Error interno." });
@@ -619,14 +660,49 @@ router.get("/fuentes", ...soloJefe, async (req, res) => {
 
 // ── PUT /api/jefe/fuentes/:id ─────────────────────────────────────────────────
 router.put("/fuentes/:id", ...soloJefe, async (req, res) => {
-  const { estado, observaciones } = req.body;
+  const { estado } = req.body;
+  const observaciones = String(req.body?.observaciones || "").trim();
   if (!["Validada", "Rechazada"].includes(estado))
     return res.status(400).json({ ok: false, mensaje: "Estado inválido." });
+  if (estado === "Rechazada" && !observaciones)
+    return res.status(400).json({
+      ok: false,
+      mensaje:
+        "Escribe el motivo del rechazo para que el residente sepa qué corregir.",
+    });
   try {
+    const [rows] = await db.execute(
+      `SELECT f.id, r.usuario_id AS residenteUsuarioId
+       FROM fuentes_informacion f
+       JOIN residentes r ON f.residente_id = r.id
+       WHERE f.id = ?`,
+      [req.params.id],
+    );
+    if (!rows.length)
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "No se encontró esa fuente." });
+
     await db.execute(
       "UPDATE fuentes_informacion SET estado=?, revisado_por=?, fecha_revision=CURDATE(), observaciones=? WHERE id=?",
       [estado, req.user.id, observaciones || null, req.params.id],
     );
+
+    const validada = estado === "Validada";
+    await notificarFuente(req.app.get("io"), {
+      usuarioId: rows[0].residenteUsuarioId,
+      tipo: "REVISION",
+      titulo: validada ? "Tu fuente fue validada" : "Tu fuente fue rechazada",
+      mensaje: validada
+        ? "Vinculación validó la fuente de tu proyecto."
+        : `Motivo: ${observaciones}`,
+      icon: validada ? "check-circle" : "x-circle",
+      iconColor: validada ? "#10B981" : "#EF4444",
+      iconBg: validada ? "#D1FAE5" : "#FEE2E2",
+      actionScreen: "fuente-proyecto",
+      actionLabel: validada ? "Ver fuente" : "Corregir fuente",
+    });
+
     return res.json({ ok: true });
   } catch (err) {
     console.error("Error en PUT /jefe/fuentes/:id:", err);
@@ -979,10 +1055,65 @@ router.put("/admin/asesores/:id/toggle", ...soloJefe, async (req, res) => {
 // ── ADMIN: Períodos ──────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
 
+// Acepta "AAAA-MM-DD" (o un ISO que empiece así) y devuelve "AAAA-MM-DD",
+// o null si no es una fecha real.
+const normalizarFecha = (valor) => {
+  if (valor === undefined || valor === null) return null;
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:$|T)/.exec(String(valor).trim());
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const f = new Date(Date.UTC(y, mo - 1, d));
+  if (
+    f.getUTCFullYear() !== y ||
+    f.getUTCMonth() !== mo - 1 ||
+    f.getUTCDate() !== d
+  )
+    return null;
+  return `${m[1]}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+};
+
+// Las 5 fechas son opcionales. Las que se capturen deben quedar dentro del
+// período y en orden: preliminar < parcial 1 < parcial 2 < parcial 3 < final.
+const validarFechasReporte = (body, fechaInicio, fechaFin) => {
+  const inicio = normalizarFecha(fechaInicio);
+  const fin = normalizarFecha(fechaFin);
+  const fechas = {};
+  let anterior = null;
+  for (const [, col, label] of FECHAS_REPORTE) {
+    const raw = body?.[col];
+    if (raw === undefined || raw === null || String(raw).trim() === "") {
+      fechas[col] = null;
+      continue;
+    }
+    const fecha = normalizarFecha(raw);
+    if (!fecha)
+      return { error: `${label}: escribe la fecha como AAAA-MM-DD.` };
+    if (!inicio || !fin)
+      return {
+        error:
+          "Revisa la fecha de inicio y la de fin del período (AAAA-MM-DD).",
+      };
+    if (fecha < inicio || fecha > fin)
+      return {
+        error: `${label}: la fecha debe quedar dentro del período (${inicio} a ${fin}).`,
+      };
+    if (anterior && fecha <= anterior.fecha)
+      return {
+        error: `${label}: la fecha debe ser posterior a la del ${anterior.label.toLowerCase()} (${anterior.fecha}).`,
+      };
+    anterior = { fecha, label };
+    fechas[col] = fecha;
+  }
+  return { fechas };
+};
+
 router.get("/periodos", ...soloJefe, async (req, res) => {
   try {
     const [rows] = await db.execute(
       `SELECT p.id, p.nombre, p.fecha_inicio, p.fecha_fin, p.descripcion, p.estado,
+              ${FECHAS_REPORTE.map(
+                ([, col]) => `DATE_FORMAT(p.${col}, '%Y-%m-%d') AS ${col}`,
+              ).join(", ")},
               COUNT(DISTINCT ep.empresa_id) AS num_empresas
        FROM periodos p
        LEFT JOIN empresa_periodos ep ON ep.periodo_id = p.id
@@ -1001,10 +1132,18 @@ router.post("/periodos", ...soloJefe, async (req, res) => {
     return res
       .status(400)
       .json({ ok: false, mensaje: "Nombre y fechas son requeridos." });
+  const { fechas, error } = validarFechasReporte(
+    req.body,
+    fecha_inicio,
+    fecha_fin,
+  );
+  if (error) return res.status(400).json({ ok: false, mensaje: error });
   try {
     const id = `per_${Date.now()}`;
     await db.execute(
-      "INSERT INTO periodos (id, nombre, fecha_inicio, fecha_fin, descripcion, estado) VALUES (?,?,?,?,?,?)",
+      `INSERT INTO periodos (id, nombre, fecha_inicio, fecha_fin, descripcion, estado,
+         fecha_preliminar, fecha_parcial1, fecha_parcial2, fecha_parcial3, fecha_final)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
       [
         id,
         nombre.trim(),
@@ -1012,6 +1151,7 @@ router.post("/periodos", ...soloJefe, async (req, res) => {
         fecha_fin,
         descripcion || null,
         estado || "planificado",
+        ...FECHAS_REPORTE.map(([, col]) => fechas[col]),
       ],
     );
     return res.json({ ok: true, id });
@@ -1027,19 +1167,64 @@ router.put("/periodos/:id", ...soloJefe, async (req, res) => {
     return res
       .status(400)
       .json({ ok: false, mensaje: "Nombre y fechas son requeridos." });
+  const { fechas, error } = validarFechasReporte(
+    req.body,
+    fecha_inicio,
+    fecha_fin,
+  );
+  if (error) return res.status(400).json({ ok: false, mensaje: error });
   try {
+    const [prev] = await db.execute(
+      "SELECT nombre FROM periodos WHERE id = ?",
+      [req.params.id],
+    );
+    if (!prev.length)
+      return res
+        .status(404)
+        .json({ ok: false, mensaje: "Período no encontrado." });
+
     await db.execute(
-      "UPDATE periodos SET nombre=?, fecha_inicio=?, fecha_fin=?, descripcion=?, estado=? WHERE id=?",
+      `UPDATE periodos SET nombre=?, fecha_inicio=?, fecha_fin=?, descripcion=?, estado=?,
+         fecha_preliminar=?, fecha_parcial1=?, fecha_parcial2=?, fecha_parcial3=?, fecha_final=?
+       WHERE id=?`,
       [
         nombre.trim(),
         fecha_inicio,
         fecha_fin,
         descripcion || null,
         estado || "planificado",
+        ...FECHAS_REPORTE.map(([, col]) => fechas[col]),
         req.params.id,
       ],
     );
-    return res.json({ ok: true });
+
+    // Lleva las fechas capturadas a los reportes que aún no se entregan
+    // (estado 'Pendiente') de los residentes con proyecto en este período.
+    // Los reportes entregados o revisados conservan su fecha. Una fecha que
+    // se deja vacía no borra la que ya tenga un reporte.
+    let reportesActualizados = 0;
+    const definidas = FECHAS_REPORTE.filter(([, col]) => fechas[col]);
+    if (definidas.length) {
+      const claves = [
+        ...new Set([req.params.id, prev[0].nombre, nombre.trim()]),
+      ];
+      const [upd] = await db.execute(
+        `UPDATE reportes r
+         JOIN proyectos p ON p.residente_id = r.residente_id
+         SET r.fecha_limite = CASE r.tipo
+           ${definidas.map(() => "WHEN ? THEN ?").join(" ")}
+           ELSE r.fecha_limite END
+         WHERE r.estado = 'Pendiente'
+           AND p.periodo IN (${claves.map(() => "?").join(",")})`,
+        [
+          ...definidas.flatMap(([tipo, col]) => [tipo, fechas[col]]),
+          ...claves,
+        ],
+      );
+      reportesActualizados = upd.affectedRows;
+    }
+
+    return res.json({ ok: true, reportesActualizados });
   } catch (err) {
     console.error("Error PUT /periodos/:id:", err);
     return res.status(500).json({ ok: false, mensaje: "Error interno." });

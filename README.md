@@ -205,6 +205,42 @@ expo start --web
 
 ---
 
+## Entrar con la cuenta de NODO
+
+Los residentes pueden entrar con su cuenta de NODO (mismo número de control). NODO emite un código de un solo
+uso (60 s) y el backend lo canjea servidor a servidor; el token de NODO nunca viaja en la dirección.
+Asesores y Jefatura siguen entrando con correo y contraseña. Si Vinculación no registró al residente, no entra.
+
+`backend/.env`:
+
+```env
+NODO_REDEEM_URL=https://jxpvprcapazklvfjctxx.supabase.co/functions/v1/vincula-redeem
+VINCULA_SHARED_SECRET=<el mismo secreto que en NODO, 32+ caracteres>
+NODO_INSTITUTION_ID=tecmx
+```
+
+`.env.local` (opcional; por defecto usa la URL pública de NODO):
+
+```env
+REACT_APP_NODO_URL=https://nodo-tecnologico.vercel.app
+```
+
+Sin estas variables, `POST /api/auth/nodo` responde 503 y el acceso con correo funciona igual.
+La parte de NODO (tabla, funciones `vincula-handoff` y `vincula-redeem`, página `/app/vincula`) está en el
+repositorio de NODO; ver su `supabase/README.md`.
+
+## Migraciones
+
+Los cambios de esquema posteriores a `schema.sql` están en `backend/migrations/` (idempotentes):
+
+```bash
+cd backend && node migrations/run.js migrations/<archivo>.sql
+```
+
+`schema.sql` ya los incluye para instalaciones nuevas. **Ojo:** `schema.sql` empieza con `DROP DATABASE`.
+
+---
+
 ## Esquema de la base de datos
 
 ```

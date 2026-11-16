@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Alert, View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
-import { Row, Card, ProgressBar, Badge } from "../components";
+import { Row, Card, Badge } from "../components";
 import { useReportes } from "../context/ReportesContext";
+import { useDialog } from "../context/DialogContext";
 import apiClient from "../utils/apiClient";
 
 // Secciones requeridas del reporte final (template fijo — no son datos de BD)
@@ -33,6 +34,7 @@ import apiClient from "../utils/apiClient";
 
 export default function ReporteFinal({ usuario }) {
   const { colors: C } = useTheme();
+  const { notify, alert } = useDialog();
   const {
     finalDesbloqueado,
     todosParcialesAprobados,
@@ -77,6 +79,7 @@ export default function ReporteFinal({ usuario }) {
                 submitted: finalReportFromBackend.submitted,
                 feedback: finalReportFromBackend.feedback,
                 archivo: finalReportFromBackend.archivo_url,
+                calificacion: finalReportFromBackend.calificacion ?? null,
               });
             }
           }
@@ -95,7 +98,7 @@ export default function ReporteFinal({ usuario }) {
   finalReport?.status === "En Revisión" ||
   finalReport?.status === "Aceptado";
   const fechaLimite = finalReport?.fecha_limite
-    ? new Date(finalReport.fecha_limite).toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })
+    ? new Date(`${finalReport.fecha_limite}T00:00:00`).toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })
     : null;
 // ── CHECKLIST: marcar completo cuando ya fue enviado o aceptado ───
     const finalCompletado =
@@ -132,22 +135,20 @@ export default function ReporteFinal({ usuario }) {
     },
   ];
 
-  // ── RÚBRICA: distribuye la calificación real según los pesos ───────────
-  const calificacion = finalReport?.calificacion ?? null;
+  // ── RÚBRICA: criterios con su peso + calificación total real ───────────
+  // El asesor registra solo la calificación total (0–100) al aceptar el
+  // reporte final; no hay puntaje por criterio, así que no se inventa.
+  const calificacionRaw = finalReport?.calificacion;
+  const calificacion =
+    calificacionRaw !== null &&
+    calificacionRaw !== undefined &&
+    !Number.isNaN(Number(calificacionRaw))
+      ? Math.round(Number(calificacionRaw))
+      : null;
   const RUBRIC = RUBRIC_TEMPLATE.map((r) => ({
     label: r.label,
-    max: Math.round(r.pct * 100),
-    earned:
-  finalCompletado && calificacion !== null
-    ? Math.round(r.pct * calificacion)
-    : finalCompletado
-      ? Math.round(r.pct * 100)
-      : 0,
+    peso: Math.round(r.pct * 100),
   }));
-  const totalEarned =
-  calificacion ??
-  (finalCompletado ? 100 : 0);
-  const totalMax    = 100;
 
   // ── Nombre del residente e iniciales ──────────────────────────────────
   const nombreResidente = usuario
@@ -284,18 +285,18 @@ export default function ReporteFinal({ usuario }) {
   const selectFile = () => {
   // Bloquear si ya fue enviado
   if (reporteYaEnviado) {
-    Alert.alert(
-      "Reporte ya enviado",
-      "Ya entregaste tu Reporte Final y no puedes subir otro archivo."
-    );
+    alert({
+      title: "Reporte ya enviado",
+      message: "Ya entregaste tu Reporte Final y no puedes subir otro archivo.",
+    });
     return;
   }
 
   if (!globalThis?.document?.createElement) {
-    Alert.alert(
-      "Seleccionar archivo",
-      "La seleccion de archivos esta disponible en la version web.",
-    );
+    alert({
+      title: "Seleccionar archivo",
+      message: "La selección de archivos está disponible en la versión web.",
+    });
     return;
   }
 
@@ -332,11 +333,20 @@ export default function ReporteFinal({ usuario }) {
 
   const uploadReport = async () => {
     if (!selectedFile) {
-      Alert.alert("Sin archivo", "Selecciona tu documento antes de entregar.");
+      notify({
+        type: "warning",
+        title: "Sin archivo",
+        message: "Selecciona tu documento antes de entregar.",
+      });
       return;
     }
     if (!fileData) {
-      Alert.alert("Error", "El archivo no se ha procesado correctamente.");
+      notify({
+        type: "error",
+        title: "Archivo no listo",
+        message:
+          "El archivo todavía no termina de procesarse. Espera un momento o vuelve a seleccionarlo.",
+      });
       return;
     }
 
@@ -353,7 +363,11 @@ export default function ReporteFinal({ usuario }) {
       });
 
       if (!res.ok) {
-        Alert.alert("Error", res.body?.mensaje || "No se pudo subir el reporte.");
+        notify({
+          type: "error",
+          title: "No se entregó el reporte",
+          message: res.body?.mensaje || "No se pudo subir el reporte.",
+        });
         return;
       }
 
@@ -365,13 +379,18 @@ export default function ReporteFinal({ usuario }) {
         });
       }
 
-      Alert.alert(
-        "Reporte Final entregado",
-        "Tu asesor recibirá una notificación para revisarlo."
-      );
+      notify({
+        type: "success",
+        title: "Reporte Final entregado",
+        message: "Tu asesor recibirá una notificación para revisarlo.",
+      });
     } catch (error) {
       console.error("Error al subir reporte:", error);
-      Alert.alert("Error", "No se pudo conectar con el servidor.");
+      notify({
+        type: "error",
+        title: "Sin conexión",
+        message: "No se pudo conectar con el servidor. Intenta de nuevo.",
+      });
     }
   };
 
@@ -991,36 +1010,47 @@ export default function ReporteFinal({ usuario }) {
               <Text style={{ fontSize: 13, fontWeight: "800", color: C.text }}>
                 Rúbrica
               </Text>
-              <Text style={{ fontSize: 13, fontWeight: "800", color: C.teal }}>
-                {totalEarned}/{totalMax}
-              </Text>
+              {calificacion !== null ? (
+                <Text style={{ fontSize: 13, fontWeight: "800", color: C.teal }}>
+                  {calificacion}/100
+                </Text>
+              ) : (
+                <Badge text="Sin calificar" color={C.textMuted} bg={C.bg} />
+              )}
             </Row>
-            <View style={{ gap: 12 }}>
-              {RUBRIC.map((r, i) => (
-                <View key={i}>
-                  <Row
-                    style={{ justifyContent: "space-between", marginBottom: 5 }}
+            <View style={{ gap: 10 }}>
+              {RUBRIC.map((r) => (
+                <Row
+                  key={r.label}
+                  style={{ justifyContent: "space-between" }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      color: C.textSub,
+                      fontWeight: "600",
+                    }}
                   >
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        color: C.textSub,
-                        fontWeight: "600",
-                      }}
-                    >
-                      {r.label}
-                    </Text>
-                    <Text style={{ fontSize: 11, color: C.textMuted }}>
-                      {r.earned}/{r.max}
-                    </Text>
-                  </Row>
-                  <ProgressBar
-                    pct={(r.earned / r.max) * 100}
-                    color={r.earned > 0 ? C.teal : C.border}
-                  />
-                </View>
+                    {r.label}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: C.textMuted }}>
+                    Peso {r.peso} %
+                  </Text>
+                </Row>
               ))}
             </View>
+            <Text
+              style={{
+                fontSize: 11,
+                color: C.textMuted,
+                marginTop: 14,
+                lineHeight: 16,
+              }}
+            >
+              {calificacion !== null
+                ? "Calificación total asignada por tu asesor al aceptar el reporte final."
+                : "Tu asesor asigna la calificación total cuando acepta el reporte final."}
+            </Text>
           </Card>
         </View>
       </Row>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import { useDialog } from "../context/DialogContext";
 import { Row, Card, Badge } from "../components";
 import apiClient from "../utils/apiClient";
 
@@ -9,6 +10,7 @@ const PASO_LABELS = ["Proyecto", "Asesor", "Residente", "Confirmar"];
 
 export default function AsignacionJefe() {
   const { colors: C } = useTheme();
+  const { notify } = useDialog();
 
   const [paso, setPaso] = useState(0);
 
@@ -46,34 +48,39 @@ export default function AsignacionJefe() {
   };
 
   const toggleResidente = (id) => {
+    if (!residentesIds.includes(id) && residentesIds.length >= 2) {
+      notify({
+        type: "warning",
+        title: "Límite alcanzado",
+        message: "Un proyecto puede tener máximo 2 residentes.",
+      });
+      return;
+    }
     setResidentesIds((prev) => {
       if (prev.includes(id)) return prev.filter((r) => r !== id);
-      if (prev.length >= 2) {
-        Alert.alert(
-          "Límite alcanzado",
-          "Un proyecto puede tener máximo 2 residentes.",
-        );
-        return prev;
-      }
+      if (prev.length >= 2) return prev;
       return [...prev, id];
     });
   };
 
+  const avisarFalta = (message) =>
+    notify({ type: "warning", title: "Falta información", message });
+
   const validarPaso = () => {
     if (paso === 0) {
       if (!proyecto.id) {
-        Alert.alert("Falta información", "Selecciona un proyecto de la lista.");
+        avisarFalta("Selecciona un proyecto de la lista.");
         return;
       }
     }
 
     if (paso === 1 && asesorIds.length === 0) {
-      Alert.alert("Falta información", "Selecciona al menos un asesor.");
+      avisarFalta("Selecciona al menos un asesor.");
       return;
     }
 
     if (paso === 2 && residentesIds.length === 0) {
-      Alert.alert("Falta información", "Selecciona al menos un residente.");
+      avisarFalta("Selecciona al menos un residente.");
       return;
     }
 
@@ -91,7 +98,15 @@ export default function AsignacionJefe() {
     });
 
     if (!res.ok) {
-      Alert.alert("Error", res.body?.mensaje || "No se pudo guardar.");
+      notify({
+        type: "error",
+        title: "No se pudo guardar la asignación",
+        message:
+          res.body?.mensaje ||
+          res.body?.error?.message ||
+          res.error?.message ||
+          "Intenta de nuevo.",
+      });
       return;
     }
 
@@ -123,10 +138,11 @@ export default function AsignacionJefe() {
     setResidentesIds([]);
     setPaso(0);
 
-    Alert.alert(
-      "Asignación guardada",
-      `El proyecto "${nuevaAsignacion.proyecto}" ha sido asignado correctamente.`,
-    );
+    notify({
+      type: "success",
+      title: "Asignación guardada",
+      message: `El proyecto "${nuevaAsignacion.proyecto}" ha sido asignado correctamente.`,
+    });
   };
 
   return (

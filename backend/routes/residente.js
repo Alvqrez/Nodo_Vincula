@@ -72,7 +72,7 @@ router.get("/reportes", auth, async (req, res) => {
     }
 
     const [rows] = await db.execute(
-      `SELECT tipo, estado, fecha_entrega, feedback, archivo_url, nombre_archivo
+      `SELECT tipo, estado, fecha_entrega, fecha_limite, feedback, calificacion, archivo_url, nombre_archivo
        FROM reportes WHERE residente_id = ? ORDER BY FIELD(tipo,'preliminar','parcial1','parcial2','parcial3','final')`,
       [residenteId],
     );
@@ -85,12 +85,26 @@ router.get("/reportes", auth, async (req, res) => {
             day: "2-digit", month: "short", year: "numeric",
           })
         : null;
+      // fecha_limite como yyyy-mm-dd (sin desfase de zona horaria) o null
+      let fechaLimite = null;
+      if (row?.fecha_limite) {
+        const d = new Date(row.fecha_limite);
+        if (!Number.isNaN(d.getTime())) {
+          fechaLimite = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        }
+      }
       const estadoNormalizado = row?.estado?.trim() || "";
       const status = row ? ESTADO_TO_STATUS[estadoNormalizado] || "Pendiente" : "Pendiente";
       return {
         id: TIPO_TO_ID[tipo], title: TIPO_TO_TITLE[tipo],
         subtitle: TIPO_TO_SUBTITLE[tipo], status, submitted: fechaEntrega,
+        fecha_limite: fechaLimite,
         reviewer: asesorNombre, feedback: row?.feedback || null,
+        // DECIMAL llega como string desde mysql2; null si el asesor no ha calificado
+        calificacion:
+          row?.calificacion !== null && row?.calificacion !== undefined
+            ? Number(row.calificacion)
+            : null,
         archivo_url: row?.archivo_url || null, nombre_archivo: row?.nombre_archivo || null,
         items: [],
       };
@@ -215,7 +229,10 @@ router.put("/reportes/:tipo", auth, async (req, res) => {
     if (io) {
       // Obtener asesor del residente para enviar notificación solo al asesor
       const [asesorRows] = await db.execute(
-        "SELECT asesor_id, usuario_id as asesor_usuario_id FROM residentes WHERE id = ?",
+        `SELECT r.asesor_id, a.usuario_id AS asesor_usuario_id
+         FROM residentes r
+         JOIN asesores a ON a.id = r.asesor_id
+         WHERE r.id = ?`,
         [residenteId]
       );
       

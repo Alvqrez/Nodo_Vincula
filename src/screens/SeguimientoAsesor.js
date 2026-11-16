@@ -57,6 +57,9 @@ export default function SeguimientoAsesor() {
   const [cumplePlanTrabajo, setCumplePlanTrabajo] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  // Calificación 0–100: solo se captura para el Reporte Final
+  const [calificacion, setCalificacion] = useState("");
+  const [calificacionError, setCalificacionError] = useState(null);
 
   // Proyecto activo
   const activeProject = useMemo(
@@ -239,10 +242,11 @@ export default function SeguimientoAsesor() {
     };
   };
 
-  const updateLocalState = (statusFinal, historialEntry) => {
+  const updateLocalState = (statusFinal, historialEntry, calificacionValor) => {
     updateReporte(activeProject.id, reviewingReport.id, {
       status: statusFinal,
       feedback: feedback.trim(),
+      score: calificacionValor,
       fechaRevision: historialEntry.fecha,
       historial: [...(reviewingReport.historial || []), historialEntry],
       cumpleObjetivos,
@@ -251,7 +255,7 @@ export default function SeguimientoAsesor() {
     });
   };
 
-  const saveReviewToBackend = async (statusFinal) => {
+  const saveReviewToBackend = async (statusFinal, calificacionValor) => {
     const reportesId = FASE_TO_REPORTES_ID[reviewingReport.fase];
     if (reportesId === undefined || !reviewReport) return { skipped: true };
 
@@ -260,6 +264,7 @@ export default function SeguimientoAsesor() {
       feedback: feedback.trim(),
       reviewer: "Asesor",
       dbReporteId: reviewingReport.id,
+      calificacion: calificacionValor,
     });
 
     if (!reviewResult) {
@@ -284,6 +289,21 @@ export default function SeguimientoAsesor() {
   const submitReview = async (newStatus) => {
     if (!validateReviewInput()) return;
 
+    // Reporte Final aceptado: la calificación entera 0–100 es obligatoria.
+    // Si se marca "Por corregir" no se guarda calificación.
+    let calificacionValor = null;
+    if (reviewingReport.fase === "Final" && newStatus === "Aceptado") {
+      const texto = calificacion.trim();
+      if (!/^\d{1,3}$/.test(texto) || Number(texto) > 100) {
+        setCalificacionError(
+          "Escribe una calificación entera de 0 a 100 para aceptar el reporte final.",
+        );
+        return;
+      }
+      calificacionValor = Number(texto);
+    }
+    setCalificacionError(null);
+
     setIsSubmittingReview(true);
     setSubmitError(null);
 
@@ -292,12 +312,20 @@ export default function SeguimientoAsesor() {
       const historialEntry = createHistorialEntry(statusFinal);
 
       // 1. Guardar en backend y obtener residenteUsuarioId
-      const reviewResult = await saveReviewToBackend(statusFinal);
+      const reviewResult = await saveReviewToBackend(
+        statusFinal,
+        calificacionValor,
+      );
+      // reviewReport devuelve el id (string) o `true` si el backend no lo envió;
+      // solo un string/number es un id válido → si no, se usa el respaldo de sendNotification.
+      const rawUsuarioId = reviewResult?.residenteUsuarioId ?? reviewResult;
       const residenteUsuarioId =
-        reviewResult?.residenteUsuarioId || reviewResult;
+        typeof rawUsuarioId === "string" || typeof rawUsuarioId === "number"
+          ? rawUsuarioId
+          : null;
 
       // 2. Actualizar estado local
-      updateLocalState(statusFinal, historialEntry);
+      updateLocalState(statusFinal, historialEntry, calificacionValor);
 
       // 3. Enviar notificación AL RESIDENTE (no al asesor)
       // BUG FIX: pasar residenteUsuarioId explícitamente para asegurar que la notif
@@ -1130,6 +1158,13 @@ export default function SeguimientoAsesor() {
 
                                 setFeedback(report.feedback || "");
                                 setFeedbackError(false);
+                                setCalificacion(
+                                  report.score !== null &&
+                                    report.score !== undefined
+                                    ? String(Math.round(Number(report.score)))
+                                    : "",
+                                );
+                                setCalificacionError(null);
 
                                 setCumpleObjetivos(
                                   report.cumpleObjetivos || false,
@@ -1544,6 +1579,61 @@ export default function SeguimientoAsesor() {
                     </Text>
                   </TouchableOpacity>
                 </View>
+
+                {/* Calificación (solo Reporte Final) */}
+                {reviewingReport.fase === "Final" && (
+                  <View style={{ marginBottom: 16 }}>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: "700",
+                        color: calificacionError ? C.red : C.textMuted,
+                        textTransform: "uppercase",
+                        marginBottom: 6,
+                      }}
+                    >
+                      Calificación del reporte final (0–100) *
+                    </Text>
+                    <Row style={{ alignItems: "center", gap: 10 }}>
+                      <TextInput
+                        value={calificacion}
+                        onChangeText={(t) => {
+                          setCalificacion(t.replace(/[^0-9]/g, ""));
+                          setCalificacionError(null);
+                        }}
+                        keyboardType="number-pad"
+                        maxLength={3}
+                        placeholder="0–100"
+                        placeholderTextColor={C.textLight}
+                        accessibilityLabel="Calificación del reporte final, de 0 a 100"
+                        style={{
+                          width: 96,
+                          padding: 10,
+                          borderRadius: 10,
+                          borderWidth: 1.5,
+                          borderColor: calificacionError ? C.red : C.border,
+                          fontSize: 15,
+                          fontWeight: "700",
+                          color: C.text,
+                          backgroundColor: C.card,
+                        }}
+                      />
+                      <Text style={{ fontSize: 12, color: C.textMuted }}>
+                        / 100
+                      </Text>
+                    </Row>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: calificacionError ? C.red : C.textMuted,
+                        marginTop: 6,
+                      }}
+                    >
+                      {calificacionError ||
+                        "Obligatoria para aceptar. Si lo marcas Por corregir, no se guarda calificación."}
+                    </Text>
+                  </View>
+                )}
 
                 {/* Retroalimentación */}
                 <Text

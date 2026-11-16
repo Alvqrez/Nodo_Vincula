@@ -1,5 +1,4 @@
 const express = require("express");
-const crypto = require("crypto");
 const db = require("../db");
 const { auth, requireRol } = require("../middleware");
 const {
@@ -41,7 +40,7 @@ router.get("/", auth, async (req, res) => {
       fase: n.fase,
       actionScreen: n.action_screen,
       actionLabel: n.action_label,
-      metadata: n.metadata ? JSON.parse(n.metadata) : null,
+      metadata: parseMetadata(n.metadata),
     }));
 
     return res.json({ ok: true, notificaciones });
@@ -103,7 +102,7 @@ router.get(
         actionScreen: n.action_screen,
         actionLabel: n.action_label,
         residente: `${n.residente_nombre} ${n.residente_apellidos}`,
-        metadata: n.metadata ? JSON.parse(n.metadata) : null,
+        metadata: parseMetadata(n.metadata),
       }));
 
       return res.json({ ok: true, notificaciones });
@@ -290,16 +289,15 @@ router.post(
       }
 
       const metadataJson = metadata ? JSON.stringify(metadata) : null;
-      const notifId = crypto.randomUUID();
 
-      // Insertar en notificaciones_activas (tabla que el GET lee)
+      // Insertar en la tabla base: `id` es INT AUTO_INCREMENT (un UUID falla en
+      // modo estricto). La vista notificaciones_activas (que lee el GET) la refleja.
       const [result] = await db.execute(
-        `INSERT INTO notificaciones_activas
-       (id, usuario_id, tipo_notificacion, titulo, mensaje, icon, icon_color, icon_bg,
+        `INSERT INTO notificaciones
+       (usuario_id, tipo_notificacion, titulo, mensaje, icon, icon_color, icon_bg,
         proyecto_id, fase, action_screen, action_label, metadata, is_read)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [
-          notifId,
           usuario_id,
           tipo_notificacion,
           titulo,
@@ -315,6 +313,7 @@ router.post(
           false,
         ],
       );
+      const notifId = result.insertId;
 
       // Emitir evento WebSocket para notificación en tiempo real
       const io = req.app.get("io");
@@ -473,6 +472,18 @@ router.delete("/:id", auth, async (req, res) => {
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+// mysql2 entrega las columnas JSON ya convertidas en objeto; solo se parsea si
+// llega como texto, y un valor dañado no tumba toda la lista.
+function parseMetadata(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
 function getIconBgColor(tipo_notificacion) {
   const colors = {
     REVISION: "#E3F2FD",

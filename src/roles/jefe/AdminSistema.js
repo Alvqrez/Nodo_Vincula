@@ -8,10 +8,10 @@ import {
   Modal,
   Pressable,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
+import { useDialog } from "../../context/DialogContext";
 import { Row, Card, Badge } from "../../components";
 import apiClient from "../../utils/apiClient";
 
@@ -129,6 +129,7 @@ function RegistrarUsuarioModal({
   rolDefault = "residente",
 }) {
   const { colors: C } = useTheme();
+  const { alert } = useDialog();
   const [rol, setRol] = useState(rolDefault);
   const [form, setForm] = useState(EMPTY_USUARIO_FORM);
   const [saving, setSaving] = useState(false);
@@ -142,41 +143,33 @@ function RegistrarUsuarioModal({
 
   const set = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
 
+  // Muestra el aviso en un diálogo propio (Alert.alert no se ve en web)
+  const avisar = (title, message) => {
+    alert({ title, message });
+    return false;
+  };
+
   const validar = () => {
-    if (!form.nombre.trim()) {
-      Alert.alert("Falta información", "Ingresa el nombre.");
-      return false;
-    }
-    if (!form.apellidos.trim()) {
-      Alert.alert("Falta información", "Ingresa los apellidos.");
-      return false;
-    }
-    if (!form.correo.trim() || !form.correo.includes("@")) {
-      Alert.alert("Falta información", "Ingresa un correo válido.");
-      return false;
-    }
-    if (form.password.length < 8) {
-      Alert.alert(
+    if (!form.nombre.trim())
+      return avisar("Falta información", "Ingresa el nombre.");
+    if (!form.apellidos.trim())
+      return avisar("Falta información", "Ingresa los apellidos.");
+    if (!form.correo.trim() || !form.correo.includes("@"))
+      return avisar("Falta información", "Ingresa un correo válido.");
+    if (form.password.length < 8)
+      return avisar(
         "Contraseña inválida",
         "La contraseña debe tener al menos 8 caracteres.",
       );
-      return false;
-    }
-    if (form.password !== form.confirmPassword) {
-      Alert.alert(
+    if (form.password !== form.confirmPassword)
+      return avisar(
         "Contraseñas no coinciden",
         "Verifica la contraseña de confirmación.",
       );
-      return false;
-    }
-    if (rol === "residente" && !form.numControl.trim()) {
-      Alert.alert("Falta información", "Ingresa el número de control.");
-      return false;
-    }
-    if (rol === "asesor" && !form.departamento) {
-      Alert.alert("Falta información", "Selecciona el departamento.");
-      return false;
-    }
+    if (rol === "residente" && !form.numControl.trim())
+      return avisar("Falta información", "Ingresa el número de control.");
+    if (rol === "asesor" && !form.departamento)
+      return avisar("Falta información", "Selecciona el departamento.");
     return true;
   };
 
@@ -198,7 +191,7 @@ function RegistrarUsuarioModal({
     const res = await apiClient.post("/api/jefe/registrar-usuario", payload);
     setSaving(false);
     if (!res.ok) {
-      Alert.alert(
+      avisar(
         "Error al registrar",
         res.body?.mensaje || "No se pudo crear el usuario.",
       );
@@ -1647,16 +1640,32 @@ const ESTADO_PERIODO_STYLE = {
   activo: { color: "#0D9488", bg: "#CCFBF1" },
   cerrado: { color: "#64748B", bg: "#F1F5F9" },
 };
+// Fechas límite de los 5 reportes; el backend las usa al asignar proyectos
+// del período y las lleva a los reportes que aún no se entregan.
+const FECHAS_REPORTE_PERIODO = [
+  { key: "fecha_preliminar", label: "Preliminar", corto: "Prel." },
+  { key: "fecha_parcial1", label: "Parcial 1", corto: "P1" },
+  { key: "fecha_parcial2", label: "Parcial 2", corto: "P2" },
+  { key: "fecha_parcial3", label: "Parcial 3", corto: "P3" },
+  { key: "fecha_final", label: "Final", corto: "Final" },
+];
+
 const EMPTY_PERIODO = {
   nombre: "",
   fecha_inicio: "",
   fecha_fin: "",
   descripcion: "",
   estado: "planificado",
+  fecha_preliminar: "",
+  fecha_parcial1: "",
+  fecha_parcial2: "",
+  fecha_parcial3: "",
+  fecha_final: "",
 };
 
 function PeriodosTab({ onPeriodoChange }) {
   const { colors: C } = useTheme();
+  const { confirm, alert } = useDialog();
   const [periodos, setPeriodos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -1697,14 +1706,24 @@ function PeriodosTab({ onPeriodoChange }) {
       fecha_fin: p.fecha_fin?.slice(0, 10) || "",
       descripcion: p.descripcion || "",
       estado: p.estado,
+      ...Object.fromEntries(
+        FECHAS_REPORTE_PERIODO.map(({ key }) => [
+          key,
+          p[key]?.slice(0, 10) || "",
+        ]),
+      ),
     });
     setEditId(p.id);
     setShowForm(true);
   };
 
   const save = async () => {
+    // Con el formulario abierto el toast queda detrás del modal: se usa diálogo
     if (!form.nombre.trim() || !form.fecha_inicio || !form.fecha_fin) {
-      showToast("Nombre y fechas son requeridos", "error");
+      alert({
+        title: "Falta información",
+        message: "Escribe el nombre, la fecha de inicio y la fecha de fin.",
+      });
       return;
     }
     setSaving(true);
@@ -1712,14 +1731,33 @@ function PeriodosTab({ onPeriodoChange }) {
       ? await apiClient.put(`/api/jefe/periodos/${editId}`, form)
       : await apiClient.post("/api/jefe/periodos", form);
     if (res.ok) {
-      showToast(editId ? "Período actualizado" : "Período creado");
+      const n = res.body?.reportesActualizados || 0;
+      showToast(
+        editId
+          ? n > 0
+            ? `Período actualizado · ${n} reporte(s) pendiente(s) con nueva fecha límite`
+            : "Período actualizado"
+          : "Período creado",
+      );
       load();
       setShowForm(false);
-    } else showToast(res.body?.mensaje || "Error", "error");
+    } else
+      alert({
+        title: "No se guardó el período",
+        message: res.body?.mensaje || "Intenta de nuevo.",
+      });
     setSaving(false);
   };
 
-  const deletePeriodo = async (id) => {
+  const deletePeriodo = async (p) => {
+    const ok = await confirm({
+      title: "Eliminar período",
+      message: `¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`,
+      confirmLabel: "Eliminar",
+      destructive: true,
+    });
+    if (!ok) return;
+    const id = p.id;
     const res = await apiClient.delete(`/api/jefe/periodos/${id}`);
     if (res.ok) {
       showToast("Período eliminado");
@@ -1865,6 +1903,34 @@ function PeriodosTab({ onPeriodoChange }) {
                         </Text>
                       </Row>
                     </Row>
+                    {/* Fechas límite de reportes del período */}
+                    <Row
+                      style={{
+                        gap: 6,
+                        marginLeft: 46,
+                        marginTop: 8,
+                        flexWrap: "wrap",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Feather name="flag" size={11} color={C.textMuted} />
+                      {FECHAS_REPORTE_PERIODO.some(({ key }) => p[key]) ? (
+                        FECHAS_REPORTE_PERIODO.map(({ key, corto }) => (
+                          <Text
+                            key={key}
+                            style={{ fontSize: 11, color: C.textSub }}
+                          >
+                            <Text style={{ color: C.textMuted }}>{corto} </Text>
+                            {p[key]?.slice(0, 10) || "—"}
+                            {key !== "fecha_final" ? "  ·" : ""}
+                          </Text>
+                        ))
+                      ) : (
+                        <Text style={{ fontSize: 11, color: C.textMuted }}>
+                          Fechas límite de reportes sin definir
+                        </Text>
+                      )}
+                    </Row>
                   </View>
                   <Row style={{ gap: 8 }}>
                     <TouchableOpacity
@@ -1880,7 +1946,7 @@ function PeriodosTab({ onPeriodoChange }) {
                       <Feather name="edit-2" size={14} color={C.textMuted} />
                     </TouchableOpacity>
                     <TouchableOpacity
-                      onPress={() => deletePeriodo(p.id)}
+                      onPress={() => deletePeriodo(p)}
                       style={{
                         padding: 8,
                         borderRadius: 8,
@@ -1945,6 +2011,8 @@ function PeriodosTab({ onPeriodoChange }) {
           <Pressable
             style={{
               width: 460,
+              maxWidth: "94%",
+              maxHeight: "92%",
               backgroundColor: C.card,
               borderRadius: 16,
               padding: 24,
@@ -1953,6 +2021,7 @@ function PeriodosTab({ onPeriodoChange }) {
             }}
             onPress={(e) => e.stopPropagation()}
           >
+            <ScrollView showsVerticalScrollIndicator={false}>
             <Row
               style={{
                 justifyContent: "space-between",
@@ -2002,6 +2071,50 @@ function PeriodosTab({ onPeriodoChange }) {
               placeholder="Notas opcionales…"
               multiline
             />
+
+            {/* Fechas límite de reportes */}
+            <View
+              style={{
+                borderTopWidth: 1,
+                borderTopColor: C.border,
+                paddingTop: 14,
+                marginBottom: 6,
+              }}
+            >
+              <Text
+                style={{ fontSize: 13, fontWeight: "800", color: C.text }}
+              >
+                Fechas límite de reportes
+              </Text>
+              <Text
+                style={{
+                  fontSize: 11,
+                  color: C.textMuted,
+                  marginTop: 3,
+                  marginBottom: 12,
+                  lineHeight: 16,
+                }}
+              >
+                Opcionales. Deben quedar dentro del período y en orden. Al
+                guardar, se aplican a los reportes que aún no se entregan.
+              </Text>
+              <View
+                style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 12 }}
+              >
+                {FECHAS_REPORTE_PERIODO.map(({ key, label }) => (
+                  <View key={key} style={{ flexGrow: 1, flexBasis: 180 }}>
+                    <LabelInput
+                      C={C}
+                      label={label}
+                      value={form[key]}
+                      onChange={(v) => setForm({ ...form, [key]: v })}
+                      placeholder="AAAA-MM-DD"
+                    />
+                  </View>
+                ))}
+              </View>
+            </View>
+
             <Text
               style={{
                 fontSize: 11,
@@ -2090,6 +2203,7 @@ function PeriodosTab({ onPeriodoChange }) {
                 )}
               </TouchableOpacity>
             </Row>
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
