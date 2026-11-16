@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import Row from "../components/Row";
+import { NODO_URL } from "../config/api";
 
 const titleCase = (str) =>
   str ? str.replace(/\b\w/g, (l) => l.toUpperCase()) : "";
@@ -71,7 +72,8 @@ const isMobile = width < 768;
 
   const displayError = loginError || error;
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    if (loading) return;
     if (!email.trim()) {
       setError("Ingresa tu correo institucional.");
       return;
@@ -82,10 +84,12 @@ const isMobile = width < 768;
     }
     setError("");
     setLoading(true);
-    setTimeout(() => {
+    // El estado de carga dura lo que dura la petición real (onLogin es async).
+    try {
+      await onLogin(email.trim(), password);
+    } finally {
       setLoading(false);
-      onLogin(email.trim(), password);
-    }, 900);
+    }
   };
 
   const handleEmailChange = (v) => {
@@ -538,6 +542,55 @@ return (
               )}
             </TouchableOpacity>
 
+            {/* ── Cuenta de NODO (residentes; solo web) ── */}
+            {Platform.OS === "web" && (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Continuar con tu cuenta de NODO"
+                onPress={() => {
+                  try {
+                    window.location.assign(`${NODO_URL}/app/vincula`);
+                  } catch {
+                    /* sin navegador */
+                  }
+                }}
+                style={{
+                  marginTop: 12,
+                  minHeight: 46,
+                  borderRadius: 10,
+                  borderWidth: 1.5,
+                  borderColor: C.border,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                }}
+              >
+                <View
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: 9,
+                    borderWidth: 3,
+                    borderColor: "#FF5A1F",
+                    borderRightColor: "transparent",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: C.text }} />
+                </View>
+                <Text style={{ color: C.text, fontSize: 14, fontWeight: "600" }}>
+                  Continuar con tu cuenta de NODO
+                </Text>
+              </TouchableOpacity>
+            )}
+            {Platform.OS === "web" && (
+              <Text style={{ color: C.textMuted, fontSize: 11, textAlign: "center", marginTop: 6 }}>
+                Para residentes registrados por Vinculación.
+              </Text>
+            )}
+
             {/* ── Soporte ── */}
             <Row style={{ justifyContent: "center", marginTop: 18, gap: 4 }}>
               <Text style={{ color: C.textLight, fontSize: 12 }}>
@@ -613,13 +666,12 @@ return (
                 lineHeight: 20,
               }}
             >
-              Si tienes problemas para acceder, comunícate con el equipo de
-              soporte del Instituto:
+              Si tienes problemas para acceder, escribe a soporte de NODO
+              Vincula. Tu cuenta la crea la Jefatura de Vinculación.
             </Text>
             {[
-              ["phone", "Teléfono", "+52 (229) 000-0000   Ext. 100"],
-              ["mail", "Correo", "soporte@itm.edu.mx"],
-              ["clock", "Horario", "Lun–Vie · 8:00 – 18:00 hrs"],
+              ["mail", "Correo", "alvqrez.dev@gmail.com"],
+              ["github", "GitHub", "github.com/Alvqrez"],
             ].map(([icon, label, value]) => (
               <Row
                 key={label}
@@ -656,6 +708,7 @@ return (
                     {label}
                   </Text>
                   <Text
+                    selectable
                     style={{ fontSize: 13, fontWeight: "600", color: C.text }}
                   >
                     {value}

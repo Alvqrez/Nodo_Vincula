@@ -1,0 +1,24 @@
+/* Estilos propios del prototipo de app. Los tokens vienen de src/index.css. */
+
+/* Pestaña horizontal de expediente: chaflán arriba a la izquierda; la pestaña
+   activa del menú lateral "entra" en la hoja de contenido. */
+.tab-left { clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px); }
+
+/* Esqueleto con brillo que recorre la forma real del contenido */
+@keyframes proto-shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.skeleton { position: relative; overflow: hidden; background: color-mix(in srgb, var(--color-ink) 7%, transparent); }
+.skeleton::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-sheet) 70%, transparent), transparent);
+  animation: proto-shimmer 1.4s var(--ease-nodo) infinite;
+}
+
+/* Línea de la ruta del expediente: punteada donde aún no se llega */
+.route-rail { background-image: linear-gradient(var(--color-rule-strong) 50%, transparent 0); background-size: 1px 6px; background-repeat: repeat-y; }
+
+/* Escenarios del prototipo: controles que NO son parte de la app */
+.proto-control { border: 1px dashed var(--color-rule-strong); }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after { animation: none; }
+}

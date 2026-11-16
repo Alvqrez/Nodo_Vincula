@@ -22,6 +22,7 @@ const WebSocketCtx = createContext(null);
 export function WebSocketProvider({ children, usuario }) {
   const [connected, setConnected] = useState(false);
   const socketRef = useRef(null);
+  const handlersRef = useRef(new Map());
   const usuarioRef = useRef(usuario);
 
   useEffect(() => {
@@ -59,6 +60,10 @@ export function WebSocketProvider({ children, usuario }) {
         timeout: 10000,
       });
       socketRef.current = socket;
+      // Conectar los suscriptores que se registraron antes de crear el socket
+      handlersRef.current.forEach((handlers, event) => {
+        handlers.forEach((h) => socket.on(event, h));
+      });
     } catch (e) {
       console.warn(
         "[WebSocket] No se pudo inicializar socket.io-client:",
@@ -96,11 +101,17 @@ export function WebSocketProvider({ children, usuario }) {
     }
   }, [usuario, joinRooms]);
 
+  // Los suscriptores se registran aunque el socket aún no exista (las pantallas
+  // pueden montarse antes que él); se conectan al socket en cuanto se crea.
   const subscribe = useCallback((event, handler) => {
-    const socket = socketRef.current;
-    if (!socket) return () => {};
-    socket.on(event, handler);
-    return () => socket.off(event, handler);
+    const registry = handlersRef.current;
+    if (!registry.has(event)) registry.set(event, new Set());
+    registry.get(event).add(handler);
+    socketRef.current?.on(event, handler);
+    return () => {
+      registry.get(event)?.delete(handler);
+      socketRef.current?.off(event, handler);
+    };
   }, []);
 
   const emit = useCallback((event, data) => {

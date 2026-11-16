@@ -4,11 +4,11 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
+import { useDialog } from "../../context/DialogContext";
 import { Row, Card, Badge, ProgressBar } from "../../components";
 import { useProyectos } from "../../context/ProyectosContext";
 
@@ -22,6 +22,7 @@ const PHASE_LABELS = {
 
 export default function ProyectosAsesor() {
   const { colors: C } = useTheme();
+  const { notify } = useDialog();
   const PHASE_COLORS = {
   propuesto: C.blue,
   desarrollo: C.amber,
@@ -68,16 +69,19 @@ const PRIORITY_OPTS = [
     if (solicitarAvanceFase) {
       const result = await solicitarAvanceFase(proyectoId);
       if (result.ok) {
-        Alert.alert(
-          "Solicitud enviada",
-          result.mensaje ||
+        notify({
+          type: "success",
+          title: "Solicitud enviada",
+          message:
+            result.mensaje ||
             "Se ha notificado al Jefe de Vinculación para aprobar el avance de fase.",
-        );
+        });
       } else {
-        Alert.alert(
-          "Error",
-          result.mensaje || "No se pudo enviar la solicitud de avance.",
-        );
+        notify({
+          type: "error",
+          title: "No se pudo enviar la solicitud",
+          message: result.mensaje || "Intenta de nuevo en unos momentos.",
+        });
       }
     }
   };

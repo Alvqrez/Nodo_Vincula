@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  Alert,
   View,
   Text,
   TextInput,
@@ -10,6 +9,7 @@ import {
 import PropTypes from "prop-types";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import { useDialog } from "../context/DialogContext";
 import { Row, Card, Badge } from "../components";
 import { ValidatedInput, validators } from "../components/ValidatedInput";
 import { useReportes } from "../context/ReportesContext";
@@ -18,6 +18,7 @@ import apiClient from "../utils/apiClient";
 
 export default function ReportePreliminar() {
   const { colors: C } = useTheme();
+  const { confirm, notify } = useDialog();
   // ── Contextos — conexión al flujo de revisión ─────────────────────────────
   const { updateReport, reports } = useReportes() || {};
   const { submitReporteFromResidente } = useProyectos() || {};
@@ -70,66 +71,72 @@ export default function ReportePreliminar() {
     // Por qué: El residente puede cometer errores al subir el archivo y necesita corregirlo rápidamente
     // Para qué: Evitar que el residente tenga que esperar a que el asesor revise para corregir errores
     if (preliminarReport?.status === "Aceptado") {
-      Alert.alert(
-        "No permitido",
-        "No puedes deshacer el envío de un reporte ya aceptado.",
-      );
+      notify({
+        type: "warning",
+        title: "No permitido",
+        message: "No puedes deshacer el envío de un reporte ya aceptado.",
+      });
       return;
     }
-    Alert.alert(
-      "Deshacer envío",
-      "¿Estás seguro de que quieres deshacer el envío? Podrás volver a subir el archivo.",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Deshacer",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              // Llamar al backend para limpiar el archivo
-              const res = await apiClient.put(
-                "/api/residente/reportes/preliminar",
-                {
-                  archivo: null,
-                  nombre_archivo: null,
-                  empresa: empresa,
-                },
-              );
-              if (res.ok) {
-                // Actualizar el estado local
-                if (updateReport) {
-                  updateReport("preliminar", {
-                    status: "Pendiente",
-                    submitted: null,
-                    feedback: null,
-                    archivo_url: null,
-                    nombre_archivo: null,
-                  });
-                }
-                setUploadedFile(null);
-                setFileData(null);
-                setSavedAt(null);
-                Alert.alert(
-                  "Envío deshecho",
-                  "Puedes volver a subir tu reporte.",
-                );
-              }
-            } catch (error) {
-              console.error("Error al deshacer envío:", error);
-              Alert.alert("Error", "No se pudo deshacer el envío.");
-            }
-          },
-        },
-      ],
-    );
+    const ok = await confirm({
+      title: "Deshacer envío",
+      message:
+        "¿Estás seguro de que quieres deshacer el envío? Podrás volver a subir el archivo.",
+      confirmLabel: "Deshacer",
+      cancelLabel: "Cancelar",
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      // Llamar al backend para limpiar el archivo
+      const res = await apiClient.put("/api/residente/reportes/preliminar", {
+        archivo: null,
+        nombre_archivo: null,
+        empresa: empresa,
+      });
+      if (res.ok) {
+        // Actualizar el estado local
+        if (updateReport) {
+          updateReport("preliminar", {
+            status: "Pendiente",
+            submitted: null,
+            feedback: null,
+            archivo_url: null,
+            nombre_archivo: null,
+          });
+        }
+        setUploadedFile(null);
+        setFileData(null);
+        setSavedAt(null);
+        notify({
+          type: "success",
+          title: "Envío deshecho",
+          message: "Puedes volver a subir tu reporte.",
+        });
+      } else {
+        notify({
+          type: "error",
+          title: "No se pudo deshacer el envío",
+          message: res.body?.mensaje || "Intenta de nuevo.",
+        });
+      }
+    } catch (error) {
+      console.error("Error al deshacer envío:", error);
+      notify({
+        type: "error",
+        title: "No se pudo deshacer el envío",
+        message: "Revisa tu conexión e intenta de nuevo.",
+      });
+    }
   };
 
   const selectFile = () => {
     if (!globalThis?.document?.createElement) {
-      Alert.alert(
-        "Seleccionar archivo",
-        "La selección de archivos está disponible en la versión web.",
-      );
+      notify({
+        type: "info",
+        title: "Seleccionar archivo",
+        message: "La selección de archivos está disponible en la versión web.",
+      });
       return;
     }
     const input = globalThis.document.createElement("input");
@@ -155,31 +162,39 @@ export default function ReportePreliminar() {
 
   const uploadReport = async () => {
     if (!empresaId) {
-      Alert.alert("Falta información", "Selecciona la empresa antes de subir.");
+      notify({
+        type: "warning",
+        title: "Falta información",
+        message: "Selecciona la empresa antes de subir.",
+      });
       return;
     }
     if (!uploadedFile) {
-      Alert.alert(
-        "Sin archivo",
-        "Selecciona el archivo del reporte preliminar antes de subirlo.",
-      );
+      notify({
+        type: "warning",
+        title: "Sin archivo",
+        message: "Selecciona el archivo del reporte preliminar antes de subirlo.",
+      });
       return;
     }
     if (preliminarReport?.status === "Aceptado") {
-      Alert.alert(
-        "Ya aceptado",
-        "Tu reporte preliminar ya fue aceptado por tu asesor.",
-      );
+      notify({
+        type: "info",
+        title: "Ya aceptado",
+        message: "Tu reporte preliminar ya fue aceptado por tu asesor.",
+      });
       return;
     }
     if (
       preliminarReport?.status === "Pendiente" &&
       preliminarReport?.submitted
     ) {
-      Alert.alert(
-        "En revisión",
-        "Tu reporte preliminar ya fue enviado y está pendiente de revisión.",
-      );
+      notify({
+        type: "info",
+        title: "En revisión",
+        message:
+          "Tu reporte preliminar ya fue enviado y está pendiente de revisión.",
+      });
       return;
     }
 
@@ -200,10 +215,11 @@ export default function ReportePreliminar() {
       });
 
       if (!res.ok) {
-        Alert.alert(
-          "Error",
-          res.body?.mensaje || "No se pudo subir el reporte.",
-        );
+        notify({
+          type: "error",
+          title: "No se pudo subir el reporte",
+          message: res.body?.mensaje || "Intenta de nuevo.",
+        });
         return;
       }
 
@@ -224,13 +240,20 @@ export default function ReportePreliminar() {
         submitReporteFromResidente("Preliminar");
       }
 
-      Alert.alert(
-        "Reporte Preliminar enviado",
-        "Tu reporte fue enviado correctamente. Tu asesor lo revisará y recibirás retroalimentación en breve.",
-      );
+      notify({
+        type: "success",
+        title: "Reporte Preliminar enviado",
+        message:
+          "Tu reporte fue enviado correctamente. Tu asesor lo revisará y recibirás retroalimentación en breve.",
+        duration: 5000,
+      });
     } catch (error) {
       console.error("Error al subir reporte:", error);
-      Alert.alert("Error", "No se pudo conectar con el servidor.");
+      notify({
+        type: "error",
+        title: "Sin conexión",
+        message: "No se pudo conectar con el servidor.",
+      });
     }
   };
 

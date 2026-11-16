@@ -8,11 +8,11 @@ import {
   Modal,
   Pressable,
   Dimensions,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import { useDialog } from "../context/DialogContext";
 import { Row, Card, StatCard, Badge } from "../components";
 import apiClient from "../utils/apiClient";
 
@@ -70,6 +70,7 @@ const validarForm = (form) => {
 
 export default function GestionEmpresas() {
   const { colors: C } = useTheme();
+  const { confirm, alert } = useDialog();
   const STATUS_STYLE = {
     Activa: { color: C.green, bg: C.greenLight },
     "Por Vencer": { color: C.amber, bg: C.amberLight },
@@ -192,10 +193,11 @@ export default function GestionEmpresas() {
 
   const openNew = () => {
     if (!periodoActivo) {
-      Alert.alert(
-        "Sin períodos activos",
-        "No hay períodos activos o planificados. No es posible registrar nuevas empresas.",
-      );
+      alert({
+        title: "Sin períodos activos",
+        message:
+          "No hay períodos activos o planificados. No es posible registrar nuevas empresas.",
+      });
       return;
     }
     setForm(EMPTY_FORM);
@@ -258,28 +260,23 @@ export default function GestionEmpresas() {
     }
   };
 
-  const confirmDelete = (co) => {
-    Alert.alert(
-      "Eliminar empresa",
-      `¿Estás seguro de que deseas eliminar "${co.name}"? Esta acción no se puede deshacer.`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: async () => {
-            const res = await apiClient.delete(`/api/jefe/empresas/${co.id}`);
-            if (res.ok) {
-              if (expandedId === co.id) setExpandedId(null);
-              await reloadEmpresas();
-              showToast("Empresa eliminada");
-            } else {
-              showToast(res.body?.mensaje || "Error al eliminar", "error");
-            }
-          },
-        },
-      ],
-    );
+  const confirmDelete = async (co) => {
+    const ok = await confirm({
+      title: "Eliminar empresa",
+      message: `¿Estás seguro de que deseas eliminar "${co.name}"? Esta acción no se puede deshacer.`,
+      confirmLabel: "Eliminar",
+      cancelLabel: "Cancelar",
+      destructive: true,
+    });
+    if (!ok) return;
+    const res = await apiClient.delete(`/api/jefe/empresas/${co.id}`);
+    if (res.ok) {
+      if (expandedId === co.id) setExpandedId(null);
+      await reloadEmpresas();
+      showToast("Empresa eliminada");
+    } else {
+      showToast(res.body?.mensaje || "Error al eliminar", "error");
+    }
   };
 
   return (

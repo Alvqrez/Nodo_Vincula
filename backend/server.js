@@ -16,6 +16,8 @@ const jefeRoutes = require("./routes/jefe");
 const notificacionesRoutes = require("./routes/notificaciones");
 const fotosRoutes = require("./routes/fotos");
 const reportesRoutes = require("./routes/reportes");
+const fuentesRoutes = require("./routes/fuentes");
+const recursosRoutes = require("./routes/recursos");
 
 const app = express();
 const server = http.createServer(app);
@@ -75,7 +77,9 @@ const io = new Server(server, {
   pingTimeout: 10000,
 });
 
-app.use(express.json({ limit: "10mb" }));
+// Los reportes llegan en base64 dentro del JSON (+33 %): 15 MB de cuerpo permiten
+// archivos de hasta 10 MB; ese límite real se valida en routes/residente.js.
+app.use(express.json({ limit: "15mb" }));
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 const globalLimiter = rateLimit({
@@ -99,6 +103,7 @@ const authLimiter = rateLimit({
 
 app.use(globalLimiter);
 app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/nodo", authLimiter);
 
 // ── Uploads protegidos con JWT ─────────────────────────────────────────────────
 app.get("/uploads/:filename", (req, res) => {
@@ -155,6 +160,8 @@ app.use("/api/jefe", jefeRoutes);
 app.use("/api/notificaciones", notificacionesRoutes);
 app.use("/api/fotos", fotosRoutes);
 app.use("/api/reportes", reportesRoutes);
+app.use("/api/fuentes", fuentesRoutes);
+app.use("/api/recursos", recursosRoutes);
 
 app.get("/api/health", (_, res) =>
   res.json({ ok: true, mensaje: "VinculaTec API corriendo 🚀" }),

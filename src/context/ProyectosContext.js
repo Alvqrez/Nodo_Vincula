@@ -167,6 +167,26 @@ export function ProyectosProvider({ children }) {
     }
   };
 
+  /** El asesor solicita al Jefe de Vinculación el avance de fase de un proyecto */
+  const solicitarAvanceFase = async (proyectoId) => {
+    try {
+      const response = await apiClient.post(
+        `/api/asesor/proyectos/${proyectoId}/solicitar-avance`,
+      );
+      if (response.ok && response.body?.ok) {
+        updateProyecto(proyectoId, { solicitudAvance: true });
+        return { ok: true, mensaje: response.body.mensaje };
+      }
+      return {
+        ok: false,
+        mensaje:
+          response.body?.mensaje || "No se pudo enviar la solicitud de avance.",
+      };
+    } catch (err) {
+      return { ok: false, mensaje: "Error de conexión" };
+    }
+  };
+
   return (
     <ProyectosCtx.Provider
       value={{
@@ -181,6 +201,7 @@ export function ProyectosProvider({ children }) {
         updatePropuesta,
         deletePropuesta,
         addProyecto,
+        solicitarAvanceFase,
         desbloquearReporteResidente,
         desbloqueadosPorResidente,
       }}

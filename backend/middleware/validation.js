@@ -115,7 +115,8 @@ const schemas = {
       icon: { type: 'string', required: false, maxLength: 50 },
       icon_color: { type: 'string', required: false, maxLength: 20 },
       icon_bg: { type: 'string', required: false, maxLength: 20 },
-      proyecto_id: { type: 'number', required: false, numeric: true },
+      // proyectos.id es VARCHAR (ej: "PROY-1", "p_1716..."), no número
+      proyecto_id: { type: 'string', required: false, maxLength: 50 },
       fase: { type: 'string', required: false, maxLength: 50 },
       action_screen: { type: 'string', required: false, maxLength: 50 },
       action_label: { type: 'string', required: false, maxLength: 100 }

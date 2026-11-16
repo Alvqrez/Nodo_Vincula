@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { getAuthToken } from "./AuthContext";
 import { API_BASE } from "../config/api";
 import { useWebSocket } from "./WebSocketContext";
@@ -111,11 +117,16 @@ export function ReportesProvider({ children }) {
   );
   const [loading, setLoading] = useState(false);
 
-  /** Actualiza campos de un reporte en el estado local */
-  const updateReport = (id, changes) =>
-    setReports((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, ...changes } : r)),
-    );
+  /** Actualiza campos de un reporte en el estado local.
+   *  Memoizada: ReporteFinal la usa como dependencia de un efecto que carga
+   *  datos; si cambiara en cada render, ese efecto se repetiría sin fin. */
+  const updateReport = useCallback(
+    (id, changes) =>
+      setReports((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, ...changes } : r)),
+      ),
+    [],
+  );
   // Nota: La petición PUT automática fue eliminada para evitar que el archivo se borrara
   // Por qué: Cuando el residente subía un archivo, una petición PUT sin cuerpo enviaba archivo=null
   // lo que borraba el archivo. Ahora el archivo se envía correctamente desde ReportePreliminar.js.
@@ -130,7 +141,13 @@ export function ReportesProvider({ children }) {
    */
   const reviewReport = async (
     id,
-    { status, feedback, reviewer = "Asesor", dbReporteId = null },
+    {
+      status,
+      feedback,
+      reviewer = "Asesor",
+      dbReporteId = null,
+      calificacion = null,
+    },
   ) => {
     const today = new Date().toLocaleDateString("es-MX", {
       day: "2-digit",
@@ -156,6 +173,7 @@ export function ReportesProvider({ children }) {
             body: JSON.stringify({
               estado: estadoBD,
               feedback: feedback || null,
+              calificacion: calificacion ?? null,
             }),
           },
         );
@@ -174,6 +192,7 @@ export function ReportesProvider({ children }) {
                   ...r,
                   status,
                   feedback,
+                  calificacion: calificacion ?? null,
                   reviewedBy: reviewer,
                   reviewedAt: today,
                 }
@@ -247,6 +266,8 @@ export function ReportesProvider({ children }) {
               submitted: remote.submitted ?? local.submitted,
               feedback: remote.feedback ?? local.feedback,
               reviewer: remote.reviewer ?? local.reviewer,
+              fecha_limite: remote.fecha_limite ?? local.fecha_limite ?? null,
+              calificacion: remote.calificacion ?? null,
               archivo: remote.nombre_archivo ?? remote.archivo ?? local.archivo,
               // Actualizar items según el status
               items: local.items.map((item) => ({

@@ -5,17 +5,18 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Alert,
   Animated,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import { useDialog } from "../context/DialogContext";
 import { Row, Card } from "../components";
 import { useReportes } from "../context/ReportesContext";
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function ReportesParciales() {
   const { colors: C } = useTheme();
+  const { notify } = useDialog();
   // ── Metadatos de cada parcial ─────────────────────────────────────────────────
   const PARCIALES = [
     { num: 1, focus: "Diagnóstico e inicio", color: C.teal },
@@ -158,10 +159,11 @@ export default function ReportesParciales() {
     const file = selectedFile[activeTab];
 
     if (!file) {
-      Alert.alert(
-        "Sin archivo",
-        "Selecciona el documento del reporte antes de enviarlo.",
-      );
+      notify({
+        type: "warning",
+        title: "Sin archivo",
+        message: "Selecciona el documento del reporte antes de enviarlo.",
+      });
       return;
     }
 

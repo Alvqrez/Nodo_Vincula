@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
   Text,
@@ -21,7 +21,7 @@ import ResidenteApp from "./src/roles/residente/ResidenteApp";
 import AsesorApp from "./src/roles/asesor/AsesorApp";
 import JefeApp from "./src/roles/jefe/JefeApp";
 
-import { setAuthToken } from "./src/context/AuthContext";
+import { setAuthToken, loadStoredToken } from "./src/context/AuthContext";
 import { API_BASE } from "./src/config/api";
 import { ReportesProvider } from "./src/context/ReportesContext";
 import { NotificacionesProvider } from "./src/context/NotificacionesContext";
@@ -29,6 +29,22 @@ import { ProyectosProvider } from "./src/context/ProyectosContext";
 import { FotosProvider } from "./src/context/FotosContext";
 import { ThemeProvider } from "./src/context/ThemeContext";
 import { WebSocketProvider } from "./src/context/WebSocketContext";
+import { DialogProvider } from "./src/context/DialogContext";
+
+/** Lee ?nodo_code= (solo web) y lo borra de la dirección sin recargar. */
+function readNodoCode() {
+  if (Platform.OS !== "web" || typeof window === "undefined") return null;
+  try {
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get("nodo_code");
+    if (!code) return null;
+    url.searchParams.delete("nodo_code");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    return code;
+  } catch {
+    return null;
+  }
+}
 
 export default function App() {
   // ── 1. Cargar fuentes Sora ────────────────────────────────────────────────
@@ -60,8 +76,80 @@ export default function App() {
   const [screen, setScreen] = useState("login");
   const [usuario, setUsuario] = useState(null);
   const [loginError, setLoginError] = useState("");
+  // true mientras se revisa si hay una sesión guardada (evita mostrar el login un instante)
+  const [restoring, setRestoring] = useState(true);
 
   const rolNormalizado = usuario?.rol?.toLowerCase();
+
+  // Misma entrada para correo/contraseña y para la cuenta de NODO.
+  function completeLogin(data) {
+    setLoginError("");
+    setAuthToken(data.token);
+    setUsuario(data.usuario);
+    try {
+      localStorage.setItem(
+        "vt_last_user_info",
+        JSON.stringify({
+          id: data.usuario.id,
+          nombre: data.usuario.nombre,
+          rol: data.usuario.rol,
+        }),
+      );
+    } catch {
+      /* sin localStorage */
+    }
+    setScreen("app");
+  }
+
+  // ── Restaurar sesión al recargar ──────────────────────────────────────────
+  // Si hay un token guardado, se valida con /auth/me. Token vencido o inválido
+  // (401), cuenta inactiva (403) o usuario inexistente (404) → se borra y se
+  // muestra el login. Si el servidor no responde, se muestra el login pero el
+  // token se conserva para el siguiente intento.
+  useEffect(() => {
+    let cancelled = false;
+    const restore = async () => {
+      try {
+        // Entrada desde NODO: ?nodo_code=<código de un solo uso>. Se quita de la
+        // dirección de inmediato (no debe quedar en el historial) y se canjea.
+        const nodoCode = readNodoCode();
+        if (nodoCode && API_BASE) {
+          const res = await fetch(`${API_BASE}/auth/nodo`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: nodoCode }),
+          });
+          const data = await res.json().catch(() => null);
+          if (cancelled) return;
+          if (data?.ok) completeLogin(data);
+          else setLoginError(data?.mensaje || "No pudimos entrar con tu cuenta de NODO.");
+          return;
+        }
+        const token = await loadStoredToken();
+        if (!token || !API_BASE) return;
+        const res = await fetch(`${API_BASE}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if ([401, 403, 404].includes(res.status)) {
+          await setAuthToken(null);
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled && data?.ok && data.usuario) {
+          setUsuario(data.usuario);
+          setScreen("app");
+        }
+      } catch (err) {
+        console.warn("No se pudo restaurar la sesión:", err?.message || err);
+      } finally {
+        if (!cancelled) setRestoring(false);
+      }
+    };
+    restore();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleLogin = async (email, password) => {
     try {
@@ -77,22 +165,7 @@ export default function App() {
         );
         return;
       }
-      setLoginError("");
-      setAuthToken(data.token);
-      setUsuario(data.usuario);
-      try {
-        localStorage.setItem(
-          "vt_last_user_info",
-          JSON.stringify({
-            id: data.usuario.id,
-            nombre: data.usuario.nombre,
-            rol: data.usuario.rol,
-          }),
-        );
-      } catch {
-        /* sin localStorage */
-      }
-      setScreen("app");
+      completeLogin(data);
     } catch (err) {
       setLoginError("Error de conexión. ¿El backend está corriendo?");
       console.error(err);
@@ -106,8 +179,8 @@ export default function App() {
     setScreen("login");
   };
 
-  // ── 3. Pantalla de carga mientras las fuentes no están listas ─────────────
-  if (!fontsLoaded) {
+  // ── 3. Pantalla de carga mientras cargan fuentes o se restaura la sesión ──
+  if (!fontsLoaded || restoring) {
     return (
       <View
         style={{
@@ -130,6 +203,7 @@ export default function App() {
     <SafeAreaProvider>
       <WebSocketProvider usuario={usuario}>
         <ThemeProvider>
+          <DialogProvider>
           <FotosProvider>
             <ProyectosProvider>
               <ReportesProvider>
@@ -157,6 +231,7 @@ export default function App() {
               </ReportesProvider>
             </ProyectosProvider>
           </FotosProvider>
+          </DialogProvider>
         </ThemeProvider>
       </WebSocketProvider>
     </SafeAreaProvider>

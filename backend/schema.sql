@@ -137,11 +137,12 @@ CREATE TABLE IF NOT EXISTS citas (
   id              INT AUTO_INCREMENT PRIMARY KEY,
   solicitante_id  VARCHAR(50) NOT NULL,
   participante_id VARCHAR(50) NOT NULL,
-  tipo            ENUM('Asesoría','Revisión','Evaluación','Entrega','Otro') DEFAULT 'Asesoría',
+  tipo            ENUM('Asesoría','Revisión','Evaluación','Entrega','Otro','Reunión con empresa','Reunión con vinculación') DEFAULT 'Asesoría',
   motivo          VARCHAR(200),
   notas           TEXT,
   fecha_hora      DATETIME    NOT NULL,
   lugar           VARCHAR(150),
+  modalidad       ENUM('Presencial','Virtual') NULL DEFAULT 'Presencial',
   estado          ENUM('Pendiente','Confirmada','Cancelada') DEFAULT 'Pendiente',
   external_id     VARCHAR(100),
   created_at      TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
@@ -184,6 +185,12 @@ CREATE TABLE IF NOT EXISTS periodos (
   nombre      VARCHAR(100) NOT NULL,
   fecha_inicio DATE        NOT NULL,
   fecha_fin    DATE        NOT NULL,
+  -- Fechas límite de los 5 reportes; las captura el jefe y las usa la asignación
+  fecha_preliminar DATE    NULL,
+  fecha_parcial1   DATE    NULL,
+  fecha_parcial2   DATE    NULL,
+  fecha_parcial3   DATE    NULL,
+  fecha_final      DATE    NULL,
   descripcion  TEXT,
   estado       ENUM('planificado','activo','cerrado') DEFAULT 'planificado',
   created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -219,6 +226,22 @@ CREATE TABLE IF NOT EXISTS auditoria_proyectos (
   INDEX idx_created_at (created_at),
   FOREIGN KEY (proyecto_id) REFERENCES proyectos(id) ON DELETE CASCADE,
   FOREIGN KEY (asesor_id) REFERENCES asesores(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── Recursos (documentos que publica el jefe por rol) ───────────────────────
+CREATE TABLE IF NOT EXISTS recursos (
+  id             VARCHAR(50)  PRIMARY KEY,
+  titulo         VARCHAR(150) NOT NULL,
+  descripcion    VARCHAR(500) NULL,
+  rol_destino    ENUM('todos','residente','asesor','jefe') NOT NULL DEFAULT 'todos',
+  nombre_archivo VARCHAR(255) NOT NULL,   -- nombre original, solo para mostrar y descargar
+  ruta_archivo   VARCHAR(255) NOT NULL,   -- nombre generado en backend/uploads/recursos/
+  mime           VARCHAR(100) NOT NULL,
+  tamano         INT          NOT NULL,   -- bytes
+  subido_por     VARCHAR(50)  NULL,
+  created_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_rol_destino (rol_destino),
+  FOREIGN KEY (subido_por) REFERENCES usuarios(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ── Notificaciones ───────────────────────────────────────────────────────────

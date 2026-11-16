@@ -13,10 +13,12 @@ import ReporteFinal from "../../screens/ReporteFinal";
 import Utilerias from "../../screens/Utilerias";
 import Notificaciones from "../../screens/Notificaciones";
 import CalendarioCitas from "../../screens/CalendarioCitas";
+import FuenteProyecto from "../../screens/FuenteProyecto";
 
 const NAV = [
   { id: "dashboard", label: "Dashboard", icon: "grid" },
   { id: "seguimiento", label: "Seguimiento", icon: "file-text" },
+  { id: "fuente-proyecto", label: "Fuente del proyecto", icon: "compass" },
   {
     id: "reportes-grupo",
     label: "Reportes",
@@ -68,7 +70,8 @@ export default function ResidenteApp({ usuario, onLogout }) {
 
   const views = {
     dashboard: <DashResidente onNavigate={navigateTo} />,
-    seguimiento: <Seguimiento />,
+    seguimiento: <Seguimiento onNavigate={navigateTo} />,
+    "fuente-proyecto": <FuenteProyecto />,
     "reporte-preliminar": <ReportePreliminar />,
     "reportes-parciales": <ReportesParciales />,
     "reporte-final": <ReporteFinal usuario={usuario} />,

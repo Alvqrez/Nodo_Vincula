@@ -5,10 +5,10 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
+import { useDialog } from "../context/DialogContext";
 import { Row, Card, StatCard, Badge } from "../components";
 import { useNotificaciones } from "../context/NotificacionesContext";
 
@@ -215,6 +215,7 @@ function NotifCard({ notif, onMarkRead, onDismiss, onNavigate }) {
 
 export default function Notificaciones({ onNavigate }) {
   const { colors: C } = useTheme();
+  const { confirm } = useDialog();
   const [activeTab, setActiveTab] = useState("Todas");
   const {
     notifications,
@@ -247,20 +248,16 @@ export default function Notificaciones({ onNavigate }) {
     Alertas: notifs.filter((n) => n.type === "Alerta").length,
   };
 
-  const handleDismissAllRead = () => {
+  const handleDismissAllRead = async () => {
     if (read === 0) return;
-    Alert.alert(
-      "Eliminar leídas",
-      `¿Eliminar las ${read} notificación(es) ya leídas?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: () => dismissAllRead?.(),
-        },
-      ],
-    );
+    const ok = await confirm({
+      title: "Eliminar leídas",
+      message: `¿Eliminar las ${read} notificación(es) ya leídas?`,
+      confirmLabel: "Eliminar",
+      cancelLabel: "Cancelar",
+      destructive: true,
+    });
+    if (ok) dismissAllRead?.();
   };
 
   return (

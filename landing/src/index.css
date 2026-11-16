@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+/* El tema efectivo siempre queda en <html data-theme> (lo pone el script de index.html). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   NODO Vincula · Concepto B "Expediente"
+   NODO es el mapa (cuadrícula cartográfica, noche). Vincula es el expediente
+   (papel cuadriculado, día). Misma marca: símbolo, señal #FF5A1F, Bricolage,
+   JetBrains Mono, esquinas con marca de registro y chaflanes.
+   Claro = papel (crema NODO como fondo, lienzo NODO como tinta).
+   Oscuro = tokens NODO exactos.
+   ───────────────────────────────────────────────────────────────────────────── */
+@theme {
+  --font-display: "Bricolage Grotesque Variable", "Geist Variable", system-ui, sans-serif;
+  --font-sans: "Geist Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Superficies */
+  --color-ground: #F3EFE6;      /* papel (crema NODO) */
+  --color-sheet: #FBF9F4;       /* hoja: derivado */
+  --color-tray: #ECE7DC;        /* bandeja / zona hundida: derivado */
+  --color-raised: #FFFFFF;
+  /* Tinta */
+  --color-ink: #0E1014;         /* lienzo NODO */
+  --color-ink-2: #3A3F48;
+  --color-ink-3: #5B606A;       /* ≥ 5:1 sobre papel */
+  /* Líneas */
+  --color-rule: rgb(14 16 20 / .12);
+  --color-rule-strong: rgb(14 16 20 / .24);
+  --color-grid: rgb(14 16 20 / .045);
+  /* Señal NODO: acción principal, estado actual, foco */
+  --color-signal: #FF5A1F;
+  --color-signal-hover: #FF7847;
+  --color-on-signal: #14161A;
+  --color-signal-ink: #B23A0C;  /* señal para texto sobre papel (AA): derivado */
+  /* Semánticos (variantes AA sobre papel) */
+  --color-ok: #2C7A58;
+  --color-warn: #8F6311;
+  --color-bad: #B8342D;
+  /* Capítulo de tinta (secciones siempre oscuras) */
+  --color-chapter: #0E1014;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --ease-nodo: cubic-bezier(.2, .8, .2, 1);
+  --ease-expo: cubic-bezier(.16, 1, .3, 1);
+}
+
+/* Sin JavaScript: sigue al sistema. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --color-ground: #0E1014; --color-sheet: #191C22; --color-tray: #14161A; --color-raised: #20242C;
+    --color-ink: #F3EFE6; --color-ink-2: #B0B4BD; --color-ink-3: #858B96;
+    --color-rule: #30343D; --color-rule-strong: #454A55; --color-grid: rgb(243 239 230 / .035);
+    --color-signal-ink: #FF7847;
+    --color-ok: #49A982; --color-warn: #E8B75B; --color-bad: #FF6B65;
+  }
+}
+
+/* Oscuro = NODO exacto. `.chapter` fuerza tinta dentro de una página clara. */
+[data-theme="dark"], .chapter {
+  --color-ground: #0E1014; --color-sheet: #191C22; --color-tray: #14161A; --color-raised: #20242C;
+  --color-ink: #F3EFE6; --color-ink-2: #B0B4BD; --color-ink-3: #858B96;
+  --color-rule: #30343D; --color-rule-strong: #454A55; --color-grid: rgb(243 239 230 / .035);
+  --color-signal-ink: #FF7847;
+  --color-ok: #49A982; --color-warn: #E8B75B; --color-bad: #FF6B65;
+}
+.chapter { color: var(--color-ink); background-color: var(--color-ground); }
+
+@layer base {
+  html { color-scheme: light; scrollbar-gutter: stable; -webkit-text-size-adjust: 100%; }
+  html[data-theme="dark"] { color-scheme: dark; }
+  body {
+    background-color: var(--color-ground);
+    /* Papel cuadriculado: el pariente diurno de la cuadrícula cartográfica de NODO */
+    background-image:
+      linear-gradient(var(--color-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible { outline: 2px solid var(--color-signal); outline-offset: 2px; }
+  ::selection { background: rgb(255 90 31 / .28); }
+  h1, h2, h3 { text-wrap: balance; }
+}
+
+/* ── Textura: grano fijo, sin repintar al desplazar (skills: solo en capa fija) ── */
+.grain {
+  position: fixed; inset: 0; pointer-events: none; z-index: 60; opacity: .07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+[data-theme="dark"] .grain { opacity: .05; }
+
+/* ── Geometría NODO ── */
+/* Marca de registro en la esquina superior izquierda (y opcional la inferior derecha) */
+.tick { position: relative; }
+.tick::before { content: ""; position: absolute; left: -1px; top: -1px; width: 14px; height: 14px; pointer-events: none;
+  border-top: 2px solid var(--color-signal); border-left: 2px solid var(--color-signal); }
+.tick-br { position: relative; }
+.tick-br::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 14px; height: 14px; pointer-events: none;
+  border-bottom: 2px solid var(--color-signal); border-right: 2px solid var(--color-signal); }
+/* Pestaña de expediente: esquina superior derecha en chaflán (carpeta + chaflán NODO) */
+.folder-tab { clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%); }
+.chamfer { clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px); }
+
+/* ── Sombras teñidas del papel (nunca negras) ── */
+.shadow-paper { box-shadow: 0 0 0 1px var(--color-rule), 0 1px 2px rgb(80 30 5 / .05), 0 22px 44px -30px rgb(80 30 5 / .32); }
+[data-theme="dark"] .shadow-paper, .chapter .shadow-paper { box-shadow: 0 0 0 1px var(--color-rule), 0 22px 44px -26px rgb(0 0 0 / .75); }
+
+/* ── Movimiento: solo transform y opacity; cada animación comunica algo ── */
+@keyframes vin-word { from { transform: translateY(110%) rotate(6deg); } }
+@keyframes vin-rise { from { opacity: 0; transform: translateY(24px); } }
+@keyframes vin-shutter { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0); } }
+@keyframes vin-settle { from { transform: scale(1.08); } }
+@keyframes vin-stamp { 0% { opacity: 0; transform: scale(1.35) rotate(-9deg); } 60% { opacity: 1; transform: scale(.96) rotate(-1deg); } 100% { transform: rotate(-2deg); } }
+@keyframes vin-draw { from { stroke-dashoffset: var(--len, 400); } to { stroke-dashoffset: 0; } }
+@keyframes vin-fade { from { opacity: 0; } }
+
+.word-mask { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .06em; margin-bottom: -.06em; }
+.word-mask > span { display: inline-block; animation: vin-word 1s var(--ease-expo) both; animation-delay: calc(var(--i, 0) * 70ms + 120ms); }
+.shutter { animation: vin-shutter 1.1s var(--ease-expo) .35s both; }
+.shutter > * { animation: vin-settle 1.4s var(--ease-expo) .35s both; }
+.stamp { animation: vin-stamp 520ms var(--ease-nodo) both; animation-delay: var(--d, 0ms); }
+.draw { stroke-dasharray: var(--len, 400); animation: vin-draw 1.2s var(--ease-nodo) both; animation-delay: var(--d, 0ms); }
+.page-in { animation: vin-fade 240ms ease-out both; }
+
+/* Revelado al entrar en pantalla (IntersectionObserver en <Reveal>). Sin JS o con
+   movimiento reducido, todo se ve en reposo. */
+.js .reveal { opacity: 0; transform: translateY(28px); transition: opacity 800ms var(--ease-expo), transform 900ms var(--ease-expo); transition-delay: var(--d, 0ms); }
+.js .reveal.is-in { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .js .reveal { opacity: 1; transform: none; }
+  .shutter, .shutter > *, .word-mask > span, .stamp, .draw { animation: none !important; }
+}
+
+/* Filas de chips que se deslizan en celular y se acomodan en escritorio (patrón NODO) */
+.chip-row { display: flex; gap: .5rem; overflow-x: auto; scrollbar-width: none; margin-inline: -1rem; padding-inline: 1rem; overscroll-behavior-x: contain; }
+.chip-row::-webkit-scrollbar { display: none; }
+.chip-row > * { flex-shrink: 0; white-space: nowrap; }
+@media (min-width: 640px) { .chip-row { flex-wrap: wrap; overflow: visible; margin-inline: 0; padding-inline: 0; } }

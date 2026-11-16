@@ -138,7 +138,7 @@ router.get("/proyectos", ...soloAsesor, async (req, res) => {
         let residentes = [];
         if (project.residente_id) {
           const [mainRes] = await db.execute(
-            `SELECT r.id, u.nombre, u.apellidos,
+            `SELECT r.id, r.usuario_id, u.nombre, u.apellidos,
                     r.carrera, r.num_control,
                     r.horas_completadas, r.horas_requeridas, r.estado
              FROM residentes r
@@ -149,7 +149,7 @@ router.get("/proyectos", ...soloAsesor, async (req, res) => {
           residentes = mainRes;
         } else if (project.empresa_id) {
           const [empRes] = await db.execute(
-            `SELECT r.id, u.nombre, u.apellidos,
+            `SELECT r.id, r.usuario_id, u.nombre, u.apellidos,
                     r.carrera, r.num_control,
                     r.horas_completadas, r.horas_requeridas, r.estado
              FROM residentes r
@@ -338,6 +338,18 @@ router.put("/reportes/:id/revisar", ...soloAsesor, async (req, res) => {
       mensaje: "Estado inválido. Usa 'Aprobado' o 'Rechazado'.",
     });
 
+  // Calificación opcional: vacía/null o un entero de 0 a 100
+  let calificacionFinal = null;
+  if (calificacion !== undefined && calificacion !== null && calificacion !== "") {
+    const n = Number(calificacion);
+    if (!Number.isInteger(n) || n < 0 || n > 100)
+      return res.status(400).json({
+        ok: false,
+        mensaje: "La calificación debe ser un número entero de 0 a 100.",
+      });
+    calificacionFinal = n;
+  }
+
   try {
     // Obtener asesorId del JWT
     const [asesorRows] = await db.execute(
@@ -385,7 +397,7 @@ router.put("/reportes/:id/revisar", ...soloAsesor, async (req, res) => {
     // Guardar revisión en la BD
     await db.execute(
       "UPDATE reportes SET estado = ?, feedback = ?, calificacion = ? WHERE id = ?",
-      [estado, feedback || null, calificacion || null, reporteId],
+      [estado, feedback || null, calificacionFinal, reporteId],
     );
 
     // BUG FIX #1 (partial): Emitir SOLO al residente correspondiente, no broadcast global.
@@ -636,9 +648,8 @@ router.post(
         const tsShort = Date.now().toString().slice(-8);
         const newId = `r_${residenteId}_${tipo}_${tsShort}`;
         await db.execute(
-          `INSERT INTO reportes (id, residente_id, tipo, estado, fecha_entrega) VALUES (?, ?, ?, 'Pendiente', CURDATE())`[
-            (newId, residenteId, tipo)
-          ],
+          `INSERT INTO reportes (id, residente_id, tipo, estado, fecha_entrega) VALUES (?, ?, ?, 'Pendiente', CURDATE())`,
+          [newId, residenteId, tipo],
         );
       }
 

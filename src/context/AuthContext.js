@@ -125,3 +125,12 @@ export async function setAuthToken(token) {
 export function getAuthToken() {
   return tokenCache;
 }
+
+// Lee el token guardado (localStorage en web, AsyncStorage en móvil) y llena
+// el caché en memoria para que apiClient lo use. Lo usa App.js al arrancar
+// para restaurar la sesión.
+export async function loadStoredToken() {
+  const stored = await storage.getItem("authToken");
+  tokenCache = stored || null;
+  return tokenCache;
+}

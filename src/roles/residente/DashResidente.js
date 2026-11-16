@@ -95,7 +95,12 @@ export default function DashResidente({ onNavigate }) {
         const isPendiente = p.status === "Pendiente";
         return {
           nombre: `Reporte ${i + 1} — ${PARCIAL_FOCUS[i] || "Reporte"}`,
-          fechaLimite: p.submitted ?? "—",
+          fechaLimite: p.fecha_limite
+            ? new Date(`${p.fecha_limite}T00:00:00`).toLocaleDateString(
+                "es-MX",
+                { day: "2-digit", month: "short", year: "numeric" },
+              )
+            : "Por definir",
           fechaEntrega: p.submitted ?? "—",
           estado: p.status,
           estadoColor: isAceptado ? C.green : isPendiente ? C.amber : C.blue,
@@ -115,7 +120,9 @@ export default function DashResidente({ onNavigate }) {
       if (res.ok && res.body?.ok) {
         const hoy = new Date();
         const proximos = res.body.citas
-          .filter((c) => new Date(c.fecha_hora) >= hoy)
+          .filter(
+            (c) => new Date(c.fecha_hora) >= hoy && c.estado !== "Cancelada",
+          )
           .slice(0, 4)
           .map((c) => ({
             fecha: new Date(c.fecha_hora).toLocaleDateString("es-MX", {
