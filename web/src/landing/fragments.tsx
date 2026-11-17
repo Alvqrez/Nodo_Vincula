@@ -56,7 +56,7 @@ export function ExpedienteMini() {
                 <span className="font-mono text-[11px] text-ink-3">{String(i + 1).padStart(2, '0')}</span>
                 <span className={`text-[14px] ${r.estado === 'bloqueado' ? 'text-ink-3' : 'text-ink'}`}>{REPORTS[i]}</span>
                 <span className="hidden font-mono text-[11px] text-ink-3 sm:block">{r.fecha}</span>
-                <Seal tone={e.tone} stamped delay={1250 + i * 120}>{e.label}</Seal>
+                <Seal look="stamp" tone={e.tone} stamped delay={1250 + i * 120}>{e.label}</Seal>
               </li>
             )
           })}
@@ -81,7 +81,7 @@ export function ExpedienteMini() {
             <p className="font-mono text-[10.5px] uppercase tracking-[.16em] text-ink-3">Fuente del proyecto</p>
             <p className="mt-2 text-[15px] font-medium text-ink">Empresa</p>
           </div>
-          <Seal tone="ok" stamped delay={1900}>Validada</Seal>
+          <Seal look="stamp" tone="ok" stamped delay={1900}>Validada</Seal>
         </div>
       </div>
     </div>
@@ -170,7 +170,7 @@ export function AsesorFragment() {
               <p className="text-[12.5px] text-ink-2">{r.reporte}</p>
             </div>
             <span className="hidden font-mono text-[11px] text-ink-3 sm:block">{r.espera}</span>
-            <Seal tone={ESTADO[r.estado].tone} stamped delay={150 + i * 110}>{ESTADO[r.estado].label}</Seal>
+            <Seal look="stamp" tone={ESTADO[r.estado].tone} stamped delay={150 + i * 110}>{ESTADO[r.estado].label}</Seal>
           </li>
         ))}
       </ul>

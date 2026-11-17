@@ -74,8 +74,17 @@ export type Tone = 'ok' | 'warn' | 'bad' | 'signal' | 'neutral'
 const TONE: Record<Tone, string> = {
   ok: 'text-ok', warn: 'text-warn', bad: 'text-bad', signal: 'text-signal-ink', neutral: 'text-ink-3',
 }
-export function Seal({ children, tone = 'neutral', stamped, delay = 0, className = '' }:
-  { children: ReactNode; tone?: Tone; stamped?: boolean; delay?: number; className?: string }) {
+/** Estado. Por defecto es texto con punto de color (la app). `look="stamp"` = sello de goma (solo la landing). */
+export function Seal({ children, tone = 'neutral', stamped, delay = 0, className = '', look = 'text' }:
+  { children: ReactNode; tone?: Tone; stamped?: boolean; delay?: number; className?: string; look?: 'text' | 'stamp' }) {
+  if (look === 'text') {
+    return (
+      <span className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-[14.5px] font-medium leading-tight ${TONE[tone]} ${className}`}>
+        <span aria-hidden="true" className="size-2 shrink-0 bg-current" />
+        <span>{children}</span>
+      </span>
+    )
+  }
   return (
     <span
       className={`inline-flex shrink-0 -rotate-2 items-center border-[1.5px] border-current px-1.5 py-[3px] font-mono text-[10.5px] font-semibold uppercase leading-none tracking-[.12em] ${TONE[tone]} ${stamped ? 'stamp' : ''} ${className}`}
@@ -156,7 +165,7 @@ export function ThemeSegmented({ className = '' }: { className?: string }) {
     <div role="radiogroup" aria-label="Apariencia" className={`inline-flex border border-rule p-0.5 ${className}`}>
       {opts.map(({ id, label, icon: I }) => (
         <button key={id} type="button" role="radio" aria-checked={choice === id} onClick={() => setChoice(id)}
-          className={`inline-flex min-h-9 items-center gap-1.5 px-3 text-xs transition-colors ${choice === id ? 'bg-ink text-ground' : 'text-ink-2 hover:text-ink'}`}>
+          className={`inline-flex min-h-11 items-center gap-1.5 px-3 text-xs transition-colors ${choice === id ? 'bg-ink text-ground' : 'text-ink-2 hover:text-ink'}`}>
           <I size={14} weight="regular" />{label}
         </button>
       ))}
@@ -206,7 +215,7 @@ export function CopyButton({ text, label }: { text: string; label: string }) {
       onClick={async () => {
         try { await navigator.clipboard.writeText(text); setDone(true); setTimeout(() => setDone(false), 1800) } catch { /* sin portapapeles */ }
       }}
-      className="inline-flex min-h-9 items-center gap-1.5 border border-rule px-2.5 text-xs text-ink-2 transition-colors hover:border-rule-strong hover:text-ink">
+      className="inline-flex min-h-11 items-center gap-1.5 border border-rule px-3 text-xs text-ink-2 transition-colors hover:border-rule-strong hover:text-ink">
       {done ? <Check size={14} /> : <Copy size={14} />}{done ? 'Copiado' : 'Copiar'}
     </button>
   )

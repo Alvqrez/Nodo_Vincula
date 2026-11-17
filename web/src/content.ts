@@ -7,8 +7,8 @@ export const SITE = {
   name: 'NODO Vincula',
   institution: 'Instituto Tecnológico de Veracruz',
   institutionShort: 'Tec de Veracruz',
-  /** URL de la app interna (Expo web). Se configura con VITE_APP_URL. */
-  appUrl: (import.meta.env.VITE_APP_URL as string | undefined) ?? 'http://localhost:8081',
+  /** Acceso a la app interna (misma web, como NODO). */
+  appUrl: '/acceso',
   nodoUrl: 'https://nodo-tecnologico.vercel.app',
   support: {
     email: 'alvqrez.dev@gmail.com',

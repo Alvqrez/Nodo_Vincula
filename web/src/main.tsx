@@ -6,13 +6,19 @@ import '@fontsource-variable/geist'
 import '@fontsource-variable/jetbrains-mono'
 import App from '@/App'
 import { ThemeProvider } from '@/theme'
+import { DialogProvider } from '@/lib/dialog'
+import { SessionProvider } from '@/lib/session'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <ThemeProvider>
-        <App />
+        <DialogProvider>
+          <SessionProvider>
+            <App />
+          </SessionProvider>
+        </DialogProvider>
       </ThemeProvider>
     </BrowserRouter>
   </StrictMode>,
