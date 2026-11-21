@@ -56,12 +56,16 @@ export function fileToDataUrl(file: File): Promise<string> {
 
 /** Abre un archivo protegido del backend (requiere el token): PDF en pestaña nueva, otros se descargan. */
 export async function abrirArchivo(ruta: string, nombre = 'archivo') {
-  const url = ruta.startsWith('http') ? ruta : `${API_ROOT}${ruta.startsWith('/') ? ruta : `/${ruta}`}`
+  const origenApi = new URL(API_ROOT || '/', window.location.origin).origin
+  const url = new URL(ruta.startsWith('http') ? ruta : `${API_ROOT}${ruta.startsWith('/') ? ruta : `/${ruta}`}`, window.location.origin)
   // La pestaña se abre antes del fetch para que el navegador no la bloquee.
   const win = window.open('', '_blank')
+  if (win) win.opener = null
   try {
-    const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-    if (!res.ok) throw new Error(res.status === 404 ? 'El archivo ya no está en el servidor.' : 'No pudimos abrir el archivo.')
+    const res = await fetch(url, { headers: token && url.origin === origenApi ? { Authorization: `Bearer ${token}` } : {} })
+    if (res.status === 401) throw new Error('Vuelve a iniciar sesión para abrir el archivo.')
+    if (res.status === 403 || res.status === 404) throw new Error('Este archivo no está disponible para tu cuenta.')
+    if (!res.ok) throw new Error('Intenta abrir el archivo de nuevo en unos minutos.')
     const blob = await res.blob()
     const obj = URL.createObjectURL(blob)
     if (blob.type === 'application/pdf' && win) { win.location.href = obj; return }
