@@ -1,9 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
-const path = require("path");
-const fs = require("fs");
-const jwt = require("jsonwebtoken");
 const { Server } = require("socket.io");
 const rateLimit = require("express-rate-limit");
 require("dotenv").config();
@@ -18,6 +15,9 @@ const fotosRoutes = require("./routes/fotos");
 const reportesRoutes = require("./routes/reportes");
 const fuentesRoutes = require("./routes/fuentes");
 const recursosRoutes = require("./routes/recursos");
+
+const descargas = require("./routes/descargas");
+const { configurarSocketSesion } = require("./utils/socketSesion");
 
 const app = express();
 const server = http.createServer(app);
@@ -105,49 +105,9 @@ app.use(globalLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/nodo", authLimiter);
 
-// ── Uploads protegidos con JWT ─────────────────────────────────────────────────
-app.get("/uploads/:filename", (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ ok: false, mensaje: "Sin token." });
-  }
-  try {
-    if (!process.env.JWT_SECRET) {
-      return res
-        .status(500)
-        .json({ ok: false, mensaje: "JWT_SECRET no configurado." });
-    }
-    jwt.verify(authHeader.split(" ")[1], process.env.JWT_SECRET);
-  } catch {
-    return res.status(401).json({ ok: false, mensaje: "Token inválido." });
-  }
+app.use("/uploads", descargas);
 
-  const filename = path.basename(req.params.filename);
-  const filePath = path.join(__dirname, "uploads", filename);
-
-  if (!fs.existsSync(filePath)) {
-    return res
-      .status(404)
-      .json({ ok: false, mensaje: "Archivo no encontrado." });
-  }
-
-  res.sendFile(filePath);
-});
-
-// ── WebSockets ────────────────────────────────────────────────────────────────
-io.on("connection", (socket) => {
-  console.log(`[WebSocket] Cliente conectado: ${socket.id}`);
-
-  socket.on("join_room", ({ userId, rol }) => {
-    if (userId) socket.join(`user_${userId}`);
-    if (rol) socket.join(`role_${rol}`);
-    console.log(`[WebSocket] ${socket.id} → user_${userId} / role_${rol}`);
-  });
-
-  socket.on("disconnect", () => {
-    console.log(`[WebSocket] Cliente desconectado: ${socket.id}`);
-  });
-});
+configurarSocketSesion(io);
 
 app.set("io", io);
 

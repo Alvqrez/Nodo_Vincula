@@ -1044,6 +1044,7 @@ router.put("/admin/asesores/:id/toggle", ...soloJefe, async (req, res) => {
       nuevoActivo,
       rows[0].uid,
     ]);
+    if (!nuevoActivo) req.app.get("io")?.in(`user_${rows[0].uid}`).disconnectSockets(true);
     return res.json({ ok: true, activo: nuevoActivo });
   } catch (err) {
     console.error("Error PUT /admin/asesores/:id/toggle:", err);

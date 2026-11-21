@@ -9,6 +9,8 @@ import {
 import { Platform } from "react-native";
 import { WS_BASE } from "../config/api";
 
+import { getAuthToken } from "./AuthContext";
+
 const WebSocketCtx = createContext(null);
 
 /**
@@ -23,20 +25,9 @@ export function WebSocketProvider({ children, usuario }) {
   const [connected, setConnected] = useState(false);
   const socketRef = useRef(null);
   const handlersRef = useRef(new Map());
-  const usuarioRef = useRef(usuario);
-
-  useEffect(() => {
-    usuarioRef.current = usuario;
-  }, [usuario]);
-
-  const joinRooms = useCallback((socket, user) => {
-    if (!socket || !user?.id) return;
-    socket.emit("join_room", { userId: user.id, rol: user.rol });
-  }, []);
-
   useEffect(() => {
     // Solo en web
-    if (Platform.OS !== "web") return;
+    if (Platform.OS !== "web" || !usuario?.id) return;
 
     // Guard: si no hay URL configurada, no intentar conectar
     if (!WS_BASE) {
@@ -52,6 +43,7 @@ export function WebSocketProvider({ children, usuario }) {
       const { io } = require("socket.io-client");
       socket = io(WS_BASE, {
         autoConnect: true,
+        auth: (cb) => cb({ token: getAuthToken() }),
         withCredentials: true,
         reconnection: true,
         reconnectionAttempts: 5, // reducido de 10 a 5
@@ -75,7 +67,6 @@ export function WebSocketProvider({ children, usuario }) {
     socket.on("connect", () => {
       console.log("[WebSocket] ✅ Conectado:", socket.id);
       setConnected(true);
-      joinRooms(socket, usuarioRef.current);
     });
 
     socket.on("disconnect", (reason) => {
@@ -90,16 +81,10 @@ export function WebSocketProvider({ children, usuario }) {
 
     return () => {
       socket.disconnect();
+      setConnected(false);
       socketRef.current = null;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Unirse a las salas cuando el usuario cambia (login / logout)
-  useEffect(() => {
-    if (socketRef.current?.connected && usuario?.id) {
-      joinRooms(socketRef.current, usuario);
-    }
-  }, [usuario, joinRooms]);
+  }, [usuario?.id, usuario?.rol]);
 
   // Los suscriptores se registran aunque el socket aún no exista (las pantallas
   // pueden montarse antes que él); se conectan al socket en cuanto se crea.

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, type ReactNode } from 'react'
 import { io, type Socket } from 'socket.io-client'
-import { API_ROOT } from './api'
+import { API_ROOT, getToken } from './api'
 
 type Handler = (data: any) => void // eslint-disable-line @typescript-eslint/no-explicit-any
 const Ctx = createContext<{ subscribe: (event: string, h: Handler) => () => void } | null>(null)
@@ -12,10 +12,9 @@ export function SocketProvider({ usuario, children }: { usuario: { id: string; r
 
   useEffect(() => {
     if (!usuario) return
-    const s = io(API_ROOT, { withCredentials: true, reconnectionAttempts: 5, reconnectionDelay: 3000, timeout: 10000 })
+    const s = io(API_ROOT, { auth: (cb) => cb({ token: getToken() }), withCredentials: true, reconnectionAttempts: 5, reconnectionDelay: 3000, timeout: 10000 })
     socketRef.current = s
     handlers.current.forEach((set, ev) => set.forEach((h) => s.on(ev, h)))
-    s.on('connect', () => s.emit('join_room', { userId: usuario.id, rol: usuario.rol }))
     return () => { s.disconnect(); socketRef.current = null }
   }, [usuario?.id, usuario?.rol]) // eslint-disable-line react-hooks/exhaustive-deps
 

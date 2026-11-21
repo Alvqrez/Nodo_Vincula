@@ -1,17 +1,23 @@
 const express = require("express");
 const db = require("../db");
-const { auth, requireRol } = require("../middleware");
+const { auth } = require("../middleware");
+const { ASESOR_ASIGNADO, usuarioActivo } = require("../utils/accesoExpediente");
 
 const router = express.Router();
 
 // ── GET /api/fotos/:userId ───────────────────────────────────────────────────
 router.get("/:userId", auth, async (req, res) => {
   try {
+    const usuario = await usuarioActivo(req.user.id);
+    if (!usuario) return res.status(401).json({ ok: false, mensaje: "Sesión no válida." });
     const [rows] = await db.execute(
-      "SELECT foto_base64 FROM fotos_perfil WHERE usuario_id = ?",
-      [req.params.userId],
+      `SELECT f.foto_base64 FROM fotos_perfil f
+       LEFT JOIN residentes res ON res.usuario_id = f.usuario_id
+       WHERE f.usuario_id = ? AND (f.usuario_id = ? OR (? = 'asesor' AND ${ASESOR_ASIGNADO}))`,
+      [req.params.userId, usuario.id, usuario.rol, usuario.id],
     );
 
+    res.set("Cache-Control", "private, no-store");
     if (rows.length === 0) {
       return res.json({ ok: true, foto: null });
     }
