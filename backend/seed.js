@@ -374,7 +374,7 @@ async function seed() {
           eid,
           aid,
           horas,
-          480,
+          500,
           periodo.fecha_inicio,
           periodo.fecha_fin,
           "activo",

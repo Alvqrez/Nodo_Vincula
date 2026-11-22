@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS residentes (
   empresa_id        VARCHAR(50),
   asesor_id         VARCHAR(50),
   horas_completadas INT         DEFAULT 0,
-  horas_requeridas  INT         DEFAULT 480,
+  horas_requeridas  INT         DEFAULT 500,
   fecha_inicio      DATE,
   fecha_fin         DATE,
   estado            ENUM('activo','completado','baja') DEFAULT 'activo',

@@ -121,7 +121,7 @@ router.get("/proyectos", ...soloAsesor, async (req, res) => {
               p.progreso, p.tecnologias AS habilidades,
               p.residente_id,
               COALESCE(res.horas_completadas, 0) AS horasDocumentadas,
-              COALESCE(res.horas_requeridas, 480) AS horasTotales,
+              COALESCE(res.horas_requeridas, 500) AS horasTotales,
               res.fecha_inicio AS fechaInicio,
               res.fecha_fin AS fechaFin,
               p.solicitud_avance

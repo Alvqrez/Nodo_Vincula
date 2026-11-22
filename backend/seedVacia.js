@@ -163,7 +163,7 @@ async function seed() {
           "EMP-1",
           "ASE-3",
           r.horas,
-          480,
+          500,
           "2026-01-13",
           "2026-07-13",
           "activo",
