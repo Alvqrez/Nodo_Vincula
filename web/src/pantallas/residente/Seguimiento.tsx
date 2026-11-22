@@ -92,7 +92,7 @@ export default function Seguimiento() {
 
   const final = rs.find((r) => r.id === 'final')
   const resumen = !listo ? null
-    : final?.estado === 'aceptado' ? 'Tu asesor aceptó los cinco reportes. Terminaste las entregas.'
+    : final?.estado === 'aceptado' ? 'Tu asesor aceptó los cinco reportes. Terminaste las entregas. Consulta el registro de la calificación oficial con tu coordinación.'
     : rep.finalDesbloqueado ? `${aceptados} de 5 reportes aceptados. El reporte final ya está abierto.`
     : `${aceptados} de 5 reportes aceptados. El reporte final se abre cuando tu asesor acepte el preliminar y los tres parciales.`
 
@@ -162,6 +162,30 @@ export default function Seguimiento() {
           </div>
         </>
       )}
+      <Section title="Requisitos y acreditación">
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid content-start gap-2">
+            <h3 className="font-medium text-ink">Antes de iniciar</h3>
+            <ul className="list-disc space-y-1 ps-5 text-sm leading-relaxed text-ink-2">
+              <li>Acreditar el servicio social y las actividades complementarias</li>
+              <li>Aprobar al menos el 80 % de los créditos del plan de estudios</li>
+              <li>No tener asignaturas en curso especial</li>
+            </ul>
+          </div>
+          <div className="grid content-start gap-2">
+            <h3 className="font-medium text-ink">Durante la residencia</h3>
+            <p className="text-sm leading-relaxed text-ink-2">La residencia comprende 500 horas en un periodo de 4 a 6 meses. Los asesores interno y externo participan en la evaluación.</p>
+          </div>
+          <div className="grid content-start gap-2">
+            <h3 className="font-medium text-ink">Al terminar</h3>
+            <p className="text-sm leading-relaxed text-ink-2">Consulta con tu coordinación el registro de la calificación oficial de residencia.</p>
+          </div>
+        </div>
+        <a className="inline-flex min-h-11 w-fit items-center text-sm text-ink-2 underline underline-offset-4 hover:text-ink"
+          href="https://regionllanos.tecnm.mx/archivos/Manual_de_Lineamientos_TecNM.pdf#page=85" target="_blank" rel="noreferrer">
+          Consultar el capítulo 12 del manual del TecNM
+        </a>
+      </Section>
     </div>
   )
 }
