@@ -1,3 +1,5 @@
+/** Presenta las acciones de navegación en la parte inferior del diseño móvil. */
+
 import { View, TouchableOpacity, Text, ScrollView, Animated } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";

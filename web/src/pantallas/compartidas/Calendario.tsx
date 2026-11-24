@@ -1,3 +1,5 @@
+/** Presenta las citas y los controles para consultar o cambiar su estado. */
+
 /**
  * Calendario de citas. Mismo comportamiento que src/screens/CalendarioCitas.js y los mismos
  * contratos de backend/routes/citas.js: participantes por rol (+ "Solo yo"), mis citas,

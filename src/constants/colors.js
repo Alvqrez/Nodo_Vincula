@@ -1,3 +1,5 @@
+/** Reúne valores de color reutilizados en el cliente Expo. */
+
 const C = {
   navy: "#0C1A35",
   navyMid: "#162444",

@@ -1,3 +1,5 @@
+/** Dibuja los elementos gráficos cartográficos utilizados por la interfaz. */
+
 /**
  * Cartografía de NODO dentro del expediente: curvas de nivel generadas (deterministas).
  * Es textura, no contenido: aria-hidden y sin eventos.

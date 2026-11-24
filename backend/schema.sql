@@ -1,7 +1,10 @@
+-- Define la base y tablas iniciales de Nodo Vincula. Su importación recrea la base vinculatec.
+
 -- ============================================================
 -- VinculaTec — Schema MySQL
 -- ============================================================
 
+-- Esta inicialización elimina primero la base vinculatec. Para una base existente se usan las migraciones.
 DROP DATABASE IF EXISTS vinculatec;
 CREATE DATABASE vinculatec CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE vinculatec;
@@ -100,6 +103,7 @@ CREATE TABLE IF NOT EXISTS proyectos (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ── Proyecto-Asesores (múltiples asesores por proyecto) ──────
+-- La clave compuesta permite relacionar un proyecto con varios asesores sin repetir la misma pareja.
 CREATE TABLE IF NOT EXISTS proyecto_asesores (
   proyecto_id  VARCHAR(50) NOT NULL,
   asesor_id    VARCHAR(50) NOT NULL,
@@ -110,6 +114,7 @@ CREATE TABLE IF NOT EXISTS proyecto_asesores (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ── Reportes ────────────────────────────────────────────────
+-- Cada reporte enlaza con un residente y guarda el estado, las fechas y la referencia al documento.
 CREATE TABLE IF NOT EXISTS reportes (
   id             VARCHAR(50) PRIMARY KEY,
   residente_id   VARCHAR(50) NOT NULL,
@@ -171,6 +176,7 @@ CREATE TABLE IF NOT EXISTS fuentes_informacion (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ── Fotos de Perfil ─────────────────────────────────────────
+-- usuario_id es clave primaria y foránea, por lo que una cuenta tiene como máximo una foto.
 CREATE TABLE IF NOT EXISTS fotos_perfil (
   usuario_id  VARCHAR(50) PRIMARY KEY,
   foto_base64 MEDIUMTEXT,

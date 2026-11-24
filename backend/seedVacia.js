@@ -1,3 +1,5 @@
+/** Carga un conjunto pequeño de datos ficticios con dos residentes en un mismo proyecto. */
+
 /**
  * VinculaTec — seedVacia.js
  * Seed mínimo: 1 usuario por rol para pruebas rápidas.

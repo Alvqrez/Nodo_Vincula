@@ -1,3 +1,5 @@
+/** Presenta el panorama del asesor y el seguimiento de sus residentes. */
+
 import { getAuthToken } from "../../context/AuthContext";
 import { API_BASE } from "../../config/api";
 import { PieChart } from "react-native-chart-kit";

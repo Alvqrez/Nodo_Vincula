@@ -1,3 +1,5 @@
+/** Sirve un archivo de reporte después de comprobar la cuenta activa y su acceso al expediente. */
+
 const express = require("express");
 const path = require("path");
 const db = require("../db");
@@ -13,6 +15,7 @@ const errorDescarga = (res, err) => {
 };
 const noDisponible = (res) => res.status(404).json({ ok: false, mensaje: "Archivo no disponible." });
 
+// Autenticar la cuenta es el primer filtro. La consulta posterior verifica el permiso sobre este reporte.
 router.get("/:filename", auth, async (req, res, next) => {
   const { filename } = req.params;
   if (!/^[\w.-]+$/.test(filename) || !EXTENSIONES_DOCUMENTO.includes(path.extname(filename).toLowerCase())) {
@@ -23,6 +26,7 @@ router.get("/:filename", auth, async (req, res, next) => {
     const usuario = await usuarioActivo(req.user.id);
     if (!usuario) return res.status(401).json({ ok: false, mensaje: "Sesión no válida." });
 
+    // La consulta usa la ruta almacenada en el expediente y el rol vigente de la cuenta.
     const [reportes] = await db.execute(
       `SELECT 1 FROM reportes r
        JOIN residentes res ON res.id = r.residente_id
@@ -37,6 +41,7 @@ router.get("/:filename", auth, async (req, res, next) => {
 
     res.set("Cache-Control", "private, no-store");
     res.set("X-Content-Type-Options", "nosniff");
+    // El archivo se lee desde uploads. Un archivo ausente y uno fuera del alcance de la cuenta usan la misma respuesta.
     res.sendFile(filename, { root: uploads }, (err) => {
       if (!err) return;
       if (res.headersSent) return next(err);

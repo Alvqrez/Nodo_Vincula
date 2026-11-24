@@ -1,3 +1,5 @@
+/** Expone rutas auxiliares de reportes del residente, incluidas las operaciones submit y undo. */
+
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const db = require("../db");

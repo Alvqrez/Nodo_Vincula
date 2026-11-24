@@ -1,3 +1,5 @@
+/** Renderiza el encabezado del diseño móvil. */
+
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";

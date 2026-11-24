@@ -1,3 +1,5 @@
+/** Reúne las operaciones de Vinculación sobre cuentas, proyectos, empresas, periodos, fuentes y estadísticas. */
+
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const db = require("../db");
@@ -467,6 +469,7 @@ const createReportesForResidentes = async (residentesIds, periodo) => {
 };
 
 // ── POST /api/jefe/asignacion ─────────────────────────────────────────────────
+// Vinculación registra aquí la asignación a partir del proyecto, el residente y sus datos de periodo.
 router.post("/asignacion", ...soloJefe, async (req, res) => {
   try {
     logger.logBusinessOperation("jefe_asignacion_proyecto", req.user.id, {
@@ -659,6 +662,7 @@ router.get("/fuentes", ...soloJefe, async (req, res) => {
 });
 
 // ── PUT /api/jefe/fuentes/:id ─────────────────────────────────────────────────
+// El resultado de la revisión se guarda en la fuente presentada por el residente.
 router.put("/fuentes/:id", ...soloJefe, async (req, res) => {
   const { estado } = req.body;
   const observaciones = String(req.body?.observaciones || "").trim();
@@ -733,6 +737,7 @@ router.get("/usuarios-registrados", ...soloJefe, async (req, res) => {
 });
 
 // ── POST /api/jefe/registrar-usuario ─────────────────────────────────────────
+// El registro crea una cuenta y los datos del perfil que corresponden a su rol.
 router.post("/registrar-usuario", ...soloJefe, async (req, res) => {
   const {
     rol,

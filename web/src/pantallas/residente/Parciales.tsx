@@ -1,3 +1,5 @@
+/** Organiza los tres parciales y selecciona qué folio mostrar. */
+
 import { useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router'
 import { FolderTabs } from '@/components/ui'

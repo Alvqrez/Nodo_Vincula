@@ -1,3 +1,5 @@
+/** Recoge las credenciales y presenta el acceso al cliente Expo. */
+
 import { useState, useRef, useEffect } from "react";
 import {
   View,

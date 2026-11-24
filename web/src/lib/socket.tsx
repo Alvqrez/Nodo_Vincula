@@ -1,3 +1,5 @@
+/** Conecta la sesión web con Socket.IO y distribuye eventos a los componentes suscritos. */
+
 import { createContext, useCallback, useContext, useEffect, useRef, type ReactNode } from 'react'
 import { io, type Socket } from 'socket.io-client'
 import { API_ROOT, getToken } from './api'
@@ -10,6 +12,7 @@ export function SocketProvider({ usuario, children }: { usuario: { id: string; r
   const socketRef = useRef<Socket | null>(null)
   const handlers = useRef(new Map<string, Set<Handler>>())
 
+  // La conexión se crea con el token de la sesión y se cierra al desmontar el proveedor.
   useEffect(() => {
     if (!usuario) return
     const s = io(API_ROOT, { auth: (cb) => cb({ token: getToken() }), withCredentials: true, reconnectionAttempts: 5, reconnectionDelay: 3000, timeout: 10000 })
@@ -18,6 +21,7 @@ export function SocketProvider({ usuario, children }: { usuario: { id: string; r
     return () => { s.disconnect(); socketRef.current = null }
   }, [usuario?.id, usuario?.rol]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // El registro de suscriptores permite conectar componentes que se montan antes de que llegue el socket.
   const subscribe = useCallback((event: string, h: Handler) => {
     if (!handlers.current.has(event)) handlers.current.set(event, new Set())
     handlers.current.get(event)!.add(h)

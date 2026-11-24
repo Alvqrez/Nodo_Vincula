@@ -25,6 +25,40 @@ Abre la dirección que Vite muestra en `Local:` y añade `/prototipo/residente`.
 
 La web tiene pantallas para entregas y seguimiento del residente, además de calendario, perfil y avisos. Los módulos principales de asesor y Vinculación siguen en rediseño en la web. Para probar esas operaciones, abre el cliente Expo.
 
+## Cómo leer el código
+
+### Empieza por la acción que quieres entender
+
+| Acción | Flujo de lectura |
+| --- | --- |
+| Abrir la web | [web/index.html](web/index.html) → [main.tsx](web/src/main.tsx) → [App.tsx](web/src/App.tsx) → [AppRoutes.tsx](web/src/app/AppRoutes.tsx) |
+| Abrir Expo | [index.js](index.js) → [App.js](App.js) → [vistas por rol](src/roles/) |
+| Entrar con una cuenta en la web | [Acceso.tsx](web/src/app/Acceso.tsx) → [sesión web](web/src/lib/session.tsx) → [ruta de autenticación](backend/routes/auth.js) |
+| Entregar un reporte | [folio y selector de archivo](web/src/pantallas/residente/piezas.tsx) → [datos del expediente](web/src/pantallas/residente/reportes.tsx) → [ruta del residente](backend/routes/residente.js) |
+| Abrir un reporte | [cliente de archivos](web/src/lib/api.ts) → [descarga autorizada](backend/routes/descargas.js) → [conexión a MySQL](backend/db.js) y archivo guardado |
+| Recibir un aviso | [sesión de Socket.IO](backend/utils/socketSesion.js) → [notificación persistente](backend/utils/notificacionPersistente.js) → [avisos en la web](web/src/lib/notificaciones.tsx) |
+
+En la descarga, fíjate en las dos preguntas que hace el servidor. Primero valida la sesión para saber quién pide el archivo. Después consulta el expediente para comprobar si esa persona puede abrir ese reporte. Los comentarios al inicio de los archivos y junto a estos bloques sirven como puntos de referencia durante la lectura.
+
+### Dónde buscar dentro de cada cliente
+
+- **Expo** · [components/](src/components/) contiene las piezas reutilizables. [screens/](src/screens/) contiene pantallas completas. [roles/](src/roles/) organiza la navegación por cuenta. [context/](src/context/) comparte datos como la sesión y los reportes. [mobile/](src/mobile/) agrupa la adaptación para pantallas pequeñas.
+- **Web Vite** · [app/](web/src/app/) contiene el acceso, la navegación y las rutas autenticadas. [pantallas/](web/src/pantallas/) contiene las vistas. [lib/](web/src/lib/) reúne las peticiones y los datos compartidos. [landing/](web/src/landing/) es la portada y [prototipo/](web/src/prototipo/) es la demo con datos ficticios.
+- **Servidor** · [routes/](backend/routes/) define las operaciones HTTP. [middleware.js](backend/middleware.js) verifica sesión y rol. [middleware/](backend/middleware/) valida datos de entrada. [utils/](backend/utils/) comparte reglas y operaciones entre rutas. [test/](backend/test/) verifica comportamientos con datos simulados.
+- **Datos** · [schema.sql](backend/schema.sql) define las tablas iniciales. [migrations/](backend/migrations/) actualiza bases que ya existen. [seed.js](backend/seed.js) y [seedVacia.js](backend/seedVacia.js) cargan datos ficticios en una base preparada.
+
+### Configuración y carpetas locales
+
+| Archivo o carpeta | Papel en el proyecto |
+| --- | --- |
+| `package.json` y `package-lock.json` | Cada paquete declara sus comandos y dependencias en el primero. npm mantiene las versiones exactas en el segundo. Hay un par en la raíz, otro en `backend/` y otro en `web/`. |
+| `app.json` y `recursos_visuales/` | Expo lee en `app.json` los nombres y rutas del icono, la imagen de arranque y el favicon. Los archivos de imagen viven en `recursos_visuales/`. |
+| `babel.config.js` | Configura la transformación de Expo y la lectura de las variables permitidas a través de `@env`. |
+| `tsconfig.json` y `web/tsconfig.json` | La raíz hereda la configuración de Expo. La web define su revisión estricta y el alcance de archivos de TypeScript. |
+| `public/` y `web/public/` | La primera contiene el HTML de Expo Web. La segunda contiene recursos públicos de la web Vite. |
+| `node_modules/`, `logs/` y `backend/uploads/` | Contienen dependencias instaladas, registros del servidor y archivos subidos. Se generan o se llenan durante la instalación y el uso. |
+| `.gitignore` | Define qué archivos locales quedan fuera de Git, como variables de entorno, dependencias, logs y reportes subidos. |
+
 ## Ejecutar el flujo completo
 
 Usa Node.js compatible con Expo 54 y MySQL 8.0. Prepara una instancia aislada de MySQL con datos ficticios. **El esquema inicial ejecuta `DROP DATABASE IF EXISTS vinculatec`.** Úsalo únicamente para preparar una instancia de prueba vacía.

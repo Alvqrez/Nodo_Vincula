@@ -1,3 +1,5 @@
+/** Guarda notificaciones en MySQL y las emite por Socket.IO cuando hay una conexión. */
+
 /**
  * Crea una notificación persistente (tabla `notificaciones`) y la emite en
  * tiempo real al usuario destinatario. Mismo patrón que POST /api/notificaciones:

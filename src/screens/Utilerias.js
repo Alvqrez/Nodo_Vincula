@@ -1,3 +1,5 @@
+/** Reúne herramientas compartidas como los recursos y la configuración del perfil. */
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,

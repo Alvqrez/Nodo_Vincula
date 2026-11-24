@@ -1,3 +1,5 @@
+/** Resuelve las direcciones de la API, Socket.IO y NODO según la configuración de Expo. */
+
 /**
  * Configuración centralizada de la API
  *

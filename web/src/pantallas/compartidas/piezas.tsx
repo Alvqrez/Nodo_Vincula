@@ -1,3 +1,5 @@
+/** Reúne piezas reutilizadas por las pantallas compartidas. */
+
 /**
  * Piezas pequeñas que comparten Avisos, Calendario y Perfil y que aún no existen
  * en el sistema común (components/app.tsx). Misma geometría NODO: cuadrados, 4 px.

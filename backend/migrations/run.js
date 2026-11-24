@@ -1,3 +1,5 @@
+/** Lee una migración SQL y la ejecuta con la conexión configurada para el backend. */
+
 /**
  * Ejecuta un archivo .sql de migración contra la base configurada en backend/.env.
  *
@@ -28,6 +30,7 @@ async function main() {
   }
 
   const sql = fs.readFileSync(ruta, "utf8");
+  // La conexión usa la base configurada para el entorno. El archivo de migración contiene las sentencias que se aplican.
   const conn = await mysql.createConnection({
     host: process.env.DB_HOST || "localhost",
     port: process.env.DB_PORT || 3306,

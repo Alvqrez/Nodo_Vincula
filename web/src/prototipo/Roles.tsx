@@ -1,3 +1,5 @@
+/** Presenta las pantallas de ejemplo de los roles con escenarios seleccionables. */
+
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowUpRight, CalendarBlank, Check, FilePdf, FileDoc, Tray, UploadSimple, VideoCamera, MapPin } from '@phosphor-icons/react'

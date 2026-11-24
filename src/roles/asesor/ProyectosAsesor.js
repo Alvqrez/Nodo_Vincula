@@ -1,3 +1,5 @@
+/** Presenta la lista de proyectos del asesor y el acceso a sus detalles. */
+
 import { useState, useMemo } from "react";
 import {
   View,

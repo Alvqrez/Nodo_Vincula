@@ -1,3 +1,5 @@
+/** Define los estilos base y los valores visuales compartidos de la web. */
+
 @import "tailwindcss";
 
 /* El tema efectivo siempre queda en <html data-theme> (lo pone el script de index.html). */

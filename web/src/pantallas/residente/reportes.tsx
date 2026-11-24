@@ -1,3 +1,5 @@
+/** Adapta los datos de la API y calcula el estado visible y las entregas habilitadas. */
+
 /**
  * Datos del residente: reportes, asesor, proyecto, fuente y citas.
  * Mismos endpoints y contratos que la app Expo (src/context/ReportesContext.js).
@@ -50,6 +52,7 @@ function derivarDesbloqueados(rs: ReporteApi[]) {
   return set
 }
 
+// Combina estados guardados y entregas habilitadas para construir los datos que dibujan las pantallas.
 export function derivar(rs: ReporteApi[]) {
   const desbloqueados = derivarDesbloqueados(rs)
   const preliminarAprobado = rs.find((r) => r.id === 'preliminar')?.status === 'Aceptado'
@@ -82,6 +85,7 @@ export function derivar(rs: ReporteApi[]) {
 type Carga = 'cargando' | 'listo' | 'error'
 
 /** Reportes del residente + entregar / deshacer. Se recargan con los eventos en tiempo real. */
+// Mantiene la lista en memoria mientras la pantalla está abierta y vuelve a leerla cuando llegan avisos.
 export function useReportes() {
   const [carga, setCarga] = useState<Carga>('cargando')
   const [error, setError] = useState<string | null>(null)

@@ -1,3 +1,5 @@
+/** Resume el expediente y pone en primer plano la próxima entrega o decisión. */
+
 import type { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { CalendarBlank, CalendarPlus, EnvelopeSimple, FolderSimpleDashed, MapPin, Signature, UploadSimple, UserCircleDashed, VideoCamera } from '@phosphor-icons/react'
@@ -37,6 +39,7 @@ function SiguienteAccion({ rs, sinAsesor }: { rs: Reporte[]; sinAsesor: boolean 
   const sig = rs.find((r) => r.estado === 'pendiente')
   const rev = rs.find((r) => r.estado === 'revision')
   const final = rs.find((r) => r.id === 'final')
+  // Una corrección pendiente tiene prioridad sobre una entrega nueva.
   const objetivo = corr ?? (sig && !(sinAsesor && sig.id === 'preliminar') ? sig : null)
   let ceja = 'Sin entregas abiertas', titulo: ReactNode = 'Esperando a tu asesor', nota = 'Te avisamos cuando se abra la siguiente entrega.'
   if (final?.estado === 'aceptado') { ceja = 'Residencia'; titulo = 'Entregas completas'; nota = 'Tu asesor aceptó los cinco reportes.' }
@@ -96,6 +99,7 @@ const LineasSkeleton = ({ n = 2 }: { n?: number }) => (
 
 export default function Inicio() {
   const u = useUsuario()
+  // Cada consulta mantiene su propio estado para que la pantalla pueda mostrar carga, error o datos.
   const rep = useReportes()
   const asesor = useAsesor()
   const proyecto = useProyecto()

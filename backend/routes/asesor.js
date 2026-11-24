@@ -1,3 +1,5 @@
+/** Atiende el tablero, los proyectos asignados y la revisión de reportes del asesor. */
+
 const express = require("express");
 const db = require("../db");
 const { auth, requireRol } = require("../middleware");
@@ -326,6 +328,7 @@ router.post(
 
 // ── PUT /api/asesor/reportes/:id/revisar ─────────────────────────────────────
 // Guarda la revisión (aprobado/rechazado + feedback) del asesor en la BD
+// El servidor relaciona al asesor con el residente antes de guardar el resultado de una revisión.
 router.put("/reportes/:id/revisar", ...soloAsesor, async (req, res) => {
   const { estado, feedback, calificacion } = req.body;
   const userId = req.user.id;

@@ -1,3 +1,5 @@
+/** Carga las fotos autorizadas y comparte la caché entre la cabecera y el perfil. */
+
 import { useEffect, useState } from 'react'
 import { api } from './api'
 

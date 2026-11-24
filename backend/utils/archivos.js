@@ -1,3 +1,5 @@
+/** Interpreta documentos codificados como base64 y comprueba extensión, tamaño y firma inicial. */
+
 /**
  * Validación de documentos subidos como base64 (mismo criterio que los reportes
  * en routes/residente.js): extensión permitida + firma real del archivo
@@ -65,6 +67,7 @@ function validarDocumento({
     return { ok: false, mensaje: "Selecciona un archivo para subir." };
   }
 
+  // Se comprueba la extensión y después se decodifica el contenido para revisar la firma y el tamaño real.
   const extension = extensionDe(nombreArchivo);
   if (!extensiones.includes(extension)) {
     return {

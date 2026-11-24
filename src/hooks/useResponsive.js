@@ -1,3 +1,5 @@
+/** Traduce las dimensiones de pantalla en opciones de diseño adaptativo. */
+
 import { useWindowDimensions } from "react-native";
 
 export const useResponsive = () => {

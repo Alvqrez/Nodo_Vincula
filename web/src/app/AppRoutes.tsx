@@ -1,3 +1,5 @@
+/** Valida el estado de sesión y monta las rutas disponibles para cada rol. */
+
 import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { Hammer } from '@phosphor-icons/react'
@@ -7,6 +9,7 @@ import { NotificacionesProvider } from '@/lib/notificaciones'
 import { SocketProvider } from '@/lib/socket'
 import { useSession, type Rol } from '@/lib/session'
 
+// Las pantallas se importan de forma diferida cuando el usuario entra en su ruta.
 const p = {
   residenteInicio: lazy(() => import('@/pantallas/residente/Inicio')),
   seguimiento: lazy(() => import('@/pantallas/residente/Seguimiento')),
@@ -31,6 +34,7 @@ function EnRediseno({ titulo }: { titulo: string }) {
   )
 }
 
+// Estas rutas definen la navegación de cada rol. Express aplica los permisos de las operaciones.
 const RUTAS: Record<Rol, { path: string; el: ReactNode }[]> = {
   residente: [
     { path: '', el: <p.residenteInicio /> },
@@ -52,6 +56,7 @@ const RUTAS: Record<Rol, { path: string; el: ReactNode }[]> = {
       .map(([path, t]) => ({ path, el: <EnRediseno titulo={t} /> })),
   ],
 }
+// Cualquier rol autenticado puede abrir estas pantallas.
 const COMPARTIDAS = [
   { path: 'avisos', el: <p.avisos /> },
   { path: 'calendario', el: <p.calendario /> },

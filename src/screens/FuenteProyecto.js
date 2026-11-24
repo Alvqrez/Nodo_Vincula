@@ -1,3 +1,5 @@
+/** Permite al residente registrar o consultar el origen de su proyecto. */
+
 import { useState, useEffect, useCallback } from "react";
 import {
   View,

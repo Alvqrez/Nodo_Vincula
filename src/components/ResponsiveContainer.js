@@ -1,3 +1,5 @@
+/** Adapta el contenedor de contenido al ancho disponible. */
+
 import React from "react";
 import { View } from "react-native";
 import { useResponsive } from "../mobile/hooks/useResponsive";

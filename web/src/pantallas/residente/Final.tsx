@@ -1,3 +1,5 @@
+/** Configura el folio del reporte final y muestra sus condiciones de apertura. */
+
 import { Check } from '@phosphor-icons/react'
 import { Seal } from '@/components/ui'
 import { CELDA_REPORTE, ESTADO_REPORTE, ErrorState, PageHeader, ReportSeal, Section, Skeleton, fechaCorta } from '@/components/app'

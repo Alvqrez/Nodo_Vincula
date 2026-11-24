@@ -1,3 +1,5 @@
+/** Muestra el indicador de notificaciones junto a una acción de interfaz. */
+
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "../context/ThemeContext";

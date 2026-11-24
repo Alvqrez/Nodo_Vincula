@@ -1,3 +1,5 @@
+/** Consulta, reemplaza o elimina la foto de perfil guardada en MySQL. */
+
 const express = require("express");
 const db = require("../db");
 const { auth } = require("../middleware");
@@ -10,6 +12,7 @@ router.get("/:userId", auth, async (req, res) => {
   try {
     const usuario = await usuarioActivo(req.user.id);
     if (!usuario) return res.status(401).json({ ok: false, mensaje: "Sesión no válida." });
+    // La misma consulta permite la foto propia o la de un residente vinculado al asesor.
     const [rows] = await db.execute(
       `SELECT f.foto_base64 FROM fotos_perfil f
        LEFT JOIN residentes res ON res.usuario_id = f.usuario_id
@@ -42,6 +45,7 @@ router.post("/", auth, async (req, res) => {
   }
 
   try {
+    // La tabla usa el ID de usuario como clave. Se actualiza la foto anterior o se crea la primera.
     const [existing] = await db.execute(
       "SELECT usuario_id FROM fotos_perfil WHERE usuario_id = ?",
       [req.user.id],

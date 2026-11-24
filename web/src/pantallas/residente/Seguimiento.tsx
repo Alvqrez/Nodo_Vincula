@@ -1,3 +1,5 @@
+/** Resume el avance y las entregas y explica los requisitos académicos. */
+
 import { useEffect, useId, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -82,6 +84,7 @@ export default function Seguimiento() {
     win.document.write(html); win.document.close(); win.focus(); win.print()
   }
   /* CSV de la tabla "Mis reportes" del inicio anterior (ahora con los 5 reportes) */
+  // Cada celda se entrecomilla antes de generar el archivo descargable.
   const csv = () => {
     const q = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
     const filas = [['Reporte', 'Límite', 'Entrega', 'Estado', 'Calificación'], ...rs.map((r) => [r.nombreLargo, fechaCorta(r.fecha_limite) ?? 'Por definir', r.submitted && r.estado !== 'bloqueado' ? r.submitted : '—', etiqueta(r), r.calificacion ?? ''])]
@@ -90,6 +93,7 @@ export default function Seguimiento() {
     setTimeout(() => URL.revokeObjectURL(a.href), 10_000)
   }
 
+  // El avance de las entregas se calcula a partir de los estados que devuelve el backend.
   const final = rs.find((r) => r.id === 'final')
   const resumen = !listo ? null
     : final?.estado === 'aceptado' ? 'Tu asesor aceptó los cinco reportes. Terminaste las entregas. Consulta el registro de la calificación oficial con tu coordinación.'

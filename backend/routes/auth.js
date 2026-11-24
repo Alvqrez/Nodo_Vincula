@@ -1,3 +1,5 @@
+/** Gestiona el inicio de sesión, la consulta del usuario actual y el canje del código de NODO. */
+
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -94,6 +96,7 @@ async function buildUsuarioResponse(user) {
 }
 
 // ── POST /api/auth/login ──────────────────────────────────────────────────────
+// El acceso con contraseña consulta el usuario y compara el hash antes de firmar una sesión.
 router.post("/login", async (req, res) => {
   const { correo, password } = req.body;
   if (!correo || !password)
@@ -149,6 +152,7 @@ router.post("/login", async (req, res) => {
 // Devuelve el mismo usuario que /login (lo usa el frontend para restaurar la
 // sesión al recargar). Una cuenta desactivada no puede restaurar sesión, igual
 // que no puede iniciarla.
+// Los clientes consultan esta ruta para recuperar el perfil al volver a abrir la aplicación.
 router.get("/me", auth, async (req, res) => {
   try {
     const [rows] = await db.execute(
@@ -183,6 +187,7 @@ router.get("/me", auth, async (req, res) => {
 const NO_REGISTRADO =
   "Tu residencia aún no está registrada en NODO Vincula. La Jefatura de Vinculación da de alta a los residentes.";
 
+// El servidor canjea el código con NODO y busca el residente registrado para esa identidad.
 router.post("/nodo", async (req, res) => {
   const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
   if (!/^[A-Za-z0-9_-]{40,64}$/.test(code))

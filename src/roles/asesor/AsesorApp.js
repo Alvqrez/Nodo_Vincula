@@ -1,3 +1,5 @@
+/** Organiza las secciones disponibles y los componentes de navegación del asesor. */
+
 import { useState, useEffect, useRef } from "react";
 import { Animated } from "react-native";
 import { AdaptiveLayout } from "../../mobile";

@@ -1,3 +1,5 @@
+/** Comparte piezas del expediente como la ruta, el folio y el selector de archivos. */
+
 /**
  * Piezas compartidas por las pantallas del residente: ruta de reportes,
  * zona de archivo (arrastrar y soltar) y el folio de un reporte con su entrega.

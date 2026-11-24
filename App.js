@@ -1,3 +1,5 @@
+/** Coordina el arranque de Expo, recupera la sesión y monta la interfaz del rol autenticado. */
+
 import { useState, useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
@@ -46,6 +48,7 @@ function readNodoCode() {
   }
 }
 
+// La raíz coordina fuentes, usuario y sesión antes de escoger la pantalla que se monta.
 export default function App() {
   // ── 1. Cargar fuentes Sora ────────────────────────────────────────────────
   const [fontsLoaded] = useFonts({
@@ -106,6 +109,7 @@ export default function App() {
   // (401), cuenta inactiva (403) o usuario inexistente (404) → se borra y se
   // muestra el login. Si el servidor no responde, se muestra el login pero el
   // token se conserva para el siguiente intento.
+  // Al abrir Expo, intenta recuperar una sesión guardada o canjear un código de NODO si llegó en la URL.
   useEffect(() => {
     let cancelled = false;
     const restore = async () => {
@@ -201,6 +205,7 @@ export default function App() {
   // pero el fetch real solo ocurre cuando AsesorApp llama reload().
   return (
     <SafeAreaProvider>
+      // Los proveedores comparten la sesión y los datos entre las pantallas del rol seleccionado.
       <WebSocketProvider usuario={usuario}>
         <ThemeProvider>
           <DialogProvider>

@@ -1,3 +1,5 @@
+/** Comparte la consulta de cuenta activa y las condiciones de asignación de asesores. */
+
 const db = require("../db");
 
 // Coincide con las tres formas de asignación usadas al revisar un reporte.

@@ -1,3 +1,5 @@
+/** Gestiona la agenda de los participantes y notifica los cambios de cada cita. */
+
 const express = require("express");
 const db = require("../db");
 const { auth } = require("../middleware");
@@ -272,6 +274,7 @@ router.post("/", auth, async (req, res) => {
 });
 
 // ── GET /api/citas/mis-citas ──────────────────────────────────────────────────
+// La agenda se construye con citas en las que la cuenta es solicitante o participante.
 router.get("/mis-citas", auth, async (req, res) => {
   try {
     const [rows] = await db.execute(

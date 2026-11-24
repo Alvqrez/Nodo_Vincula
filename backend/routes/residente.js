@@ -1,3 +1,5 @@
+/** Consulta el expediente del residente y registra entregas y retiros de archivos. */
+
 const express = require("express");
 const db = require("../db");
 const fs = require("fs");
@@ -139,6 +141,7 @@ router.put("/reportes/:tipo", auth, requireRol("residente"), async (req, res) =>
     const today = new Date().toISOString().split("T")[0];
     const { archivo, nombre_archivo } = req.body || {};
 
+    // El cliente usa null para retirar un reporte. Para entregarlo necesita los datos del archivo y su nombre.
     const retirar = archivo === null;
     if (!retirar && (typeof archivo !== "string" || !archivo || typeof nombre_archivo !== "string" || !nombre_archivo)) {
       return res.status(400).json({ ok: false, mensaje: "Selecciona un archivo para entregar." });
@@ -193,6 +196,7 @@ router.put("/reportes/:tipo", auth, requireRol("residente"), async (req, res) =>
       }
     }
 
+    // El archivo ya está en disco. La transacción coordina el estado y la referencia que se guardan en MySQL.
     const conexion = await db.getConnection();
     try {
       await conexion.beginTransaction();
@@ -205,6 +209,7 @@ router.put("/reportes/:tipo", auth, requireRol("residente"), async (req, res) =>
         throw new Error("El residente dejó de estar disponible.");
       }
 
+      // Dentro del bloqueo se decide si ya existe el reporte de esta etapa o si se debe crear.
       const [existing] = await conexion.execute(
         "SELECT id FROM reportes WHERE residente_id = ? AND tipo = ?",
         [residenteId, tipo],
@@ -238,6 +243,7 @@ router.put("/reportes/:tipo", auth, requireRol("residente"), async (req, res) =>
       conexion.release();
     }
 
+    // La notificación se intenta después de guardar el cambio para que el asesor pueda consultar el nuevo estado.
     const io = req.app.get("io");
     try {
       if (io && !retirar) {

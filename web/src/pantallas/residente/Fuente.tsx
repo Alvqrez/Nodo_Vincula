@@ -1,3 +1,5 @@
+/** Presenta el formulario y el estado de la declaración de origen del proyecto. */
+
 import { useState, type ComponentType } from 'react'
 import { Archive, Buildings, PaperPlaneTilt, PencilSimple, User, type IconProps } from '@phosphor-icons/react'
 import { Button, Seal, type Tone } from '@/components/ui'
@@ -8,6 +10,7 @@ import { useFuente, type Fuente as FuenteT } from './reportes'
 import { Dato } from './piezas'
 
 const MAX = 300
+// Las opciones del formulario comparten el identificador que espera la API y los textos que lee el residente.
 const TIPOS: { id: FuenteT['tipo']; label: string; ayuda: string; icon: ComponentType<IconProps> }[] = [
   { id: 'propia', label: 'Propuesta propia', ayuda: 'Tú planteaste el proyecto.', icon: User },
   { id: 'banco', label: 'Banco de proyectos', ayuda: 'Lo elegiste del banco de proyectos de la institución.', icon: Archive },
@@ -22,6 +25,7 @@ const PASOS = [
   ['Validada o rechazada', 'Si la rechazan verás el motivo y podrás corregirla.'],
 ] as const
 
+// La pantalla reúne la declaración actual y permite editarla según su estado.
 export default function Fuente() {
   const { notify } = useDialog()
   const f = useFuente()

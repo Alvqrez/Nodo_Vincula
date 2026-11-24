@@ -1,3 +1,5 @@
+/** Conecta Expo Web con Socket.IO y distribuye eventos a las pantallas suscritas. */
+
 import {
   createContext,
   useContext,
@@ -25,6 +27,7 @@ export function WebSocketProvider({ children, usuario }) {
   const [connected, setConnected] = useState(false);
   const socketRef = useRef(null);
   const handlersRef = useRef(new Map());
+  // Expo Web abre la conexión cuando ya tiene una cuenta. Al salir, se desmonta y cierra el socket.
   useEffect(() => {
     // Solo en web
     if (Platform.OS !== "web" || !usuario?.id) return;
@@ -88,6 +91,7 @@ export function WebSocketProvider({ children, usuario }) {
 
   // Los suscriptores se registran aunque el socket aún no exista (las pantallas
   // pueden montarse antes que él); se conectan al socket en cuanto se crea.
+  // Cada pantalla conserva su suscripción aunque el socket todavía esté conectándose.
   const subscribe = useCallback((event, handler) => {
     const registry = handlersRef.current;
     if (!registry.has(event)) registry.set(event, new Set());

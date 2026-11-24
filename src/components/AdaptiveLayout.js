@@ -1,3 +1,5 @@
+/** Selecciona una estructura de navegación de escritorio o móvil según el tamaño disponible. */
+
 import { View, Platform, Animated, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../context/ThemeContext";

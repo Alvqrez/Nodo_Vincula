@@ -1,3 +1,5 @@
+/** Gestiona la lectura, actualización y caché de fotos de perfil en Expo. */
+
 /**
  * FotosContext
  * Almacén centralizado de fotos de perfil.

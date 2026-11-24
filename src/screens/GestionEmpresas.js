@@ -1,3 +1,5 @@
+/** Presenta la administración de empresas y sus convenios. */
+
 import { useState, useEffect, useRef } from "react";
 import {
   View,

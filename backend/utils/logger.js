@@ -1,3 +1,5 @@
+/** Escribe registros estructurados del backend y gestiona su rotación local. */
+
 /**
  * Sistema de Logging Centralizado
  * Proporciona logging estructurado para monitoreo y debugging

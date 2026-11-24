@@ -1,3 +1,5 @@
+/** Presenta el seguimiento de residentes y las acciones de revisión del asesor. */
+
 import { useState, useMemo } from "react";
 import {
   View,

@@ -1,3 +1,5 @@
+/** Presenta el nombre y los elementos de marca utilizados en la interfaz. */
+
 import type { CSSProperties } from 'react'
 
 /** Símbolo NODO sin modificar: punto + anillo abierto (la conexión posible). */

@@ -1,3 +1,5 @@
+/** Combina un campo de formulario con la presentación de su error de validación. */
+
 import React, { useState, useEffect } from "react";
 import { View, TextInput, Text, StyleSheet } from "react-native";
 import PropTypes from "prop-types";

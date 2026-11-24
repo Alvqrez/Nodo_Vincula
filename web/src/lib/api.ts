@@ -1,3 +1,5 @@
+/** Concentra las peticiones autenticadas y las operaciones de archivos del cliente web. */
+
 /**
  * Cliente del backend de NODO Vincula (Express). Mismos endpoints y contratos que la app Expo.
  * Base: VITE_API_URL (raíz del servidor, sin /api). Por defecto, el backend local.
@@ -15,6 +17,7 @@ export function setToken(t: string | null) {
 
 export type ApiResult<T = Record<string, unknown>> = { ok: boolean; status: number; body: (T & { ok?: boolean; mensaje?: string }) | null; error?: string }
 
+// Aquí se agregan las cabeceras y se convierte la respuesta de Express en un resultado para la interfaz.
 async function request<T>(method: string, path: string, data?: unknown): Promise<ApiResult<T>> {
   const headers: Record<string, string> = {}
   if (data !== undefined) headers['Content-Type'] = 'application/json'
@@ -62,6 +65,7 @@ export async function abrirArchivo(ruta: string, nombre = 'archivo') {
   const win = window.open('', '_blank')
   if (win) win.opener = null
   try {
+    // El token se agrega únicamente cuando el archivo se pide al origen configurado de la API.
     const res = await fetch(url, { headers: token && url.origin === origenApi ? { Authorization: `Bearer ${token}` } : {} })
     if (res.status === 401) throw new Error('Vuelve a iniciar sesión para abrir el archivo.')
     if (res.status === 403 || res.status === 404) throw new Error('Este archivo no está disponible para tu cuenta.')

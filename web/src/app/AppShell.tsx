@@ -1,3 +1,5 @@
+/** Enmarca las pantallas autenticadas con navegación, encabezado y perfil. */
+
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import { AnimatePresence, motion } from 'framer-motion'

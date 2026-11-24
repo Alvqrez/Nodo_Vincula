@@ -1,3 +1,5 @@
+/** Proporciona una superficie común para agrupar contenido de una pantalla. */
+
 import { View } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 export default function Card({ children, style }) {

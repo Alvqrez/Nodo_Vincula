@@ -1,3 +1,5 @@
+/** Prueba descargas, sesiones de Socket.IO y la reversión de una entrega usando dobles de MySQL. */
+
 const assert = require("node:assert/strict");
 const { once, EventEmitter } = require("node:events");
 const test = require("node:test");

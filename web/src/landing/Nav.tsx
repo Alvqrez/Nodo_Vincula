@@ -1,3 +1,5 @@
+/** Presenta las opciones de navegación en la portada. */
+
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Lockup } from '@/components/brand'
 import { Button, ThemeToggle } from '@/components/ui'

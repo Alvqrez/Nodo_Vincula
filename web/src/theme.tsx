@@ -1,3 +1,5 @@
+/** Gestiona el tema de la web y proporciona el estado de apariencia a React. */
+
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 
 /** 'system' = sigue al dispositivo; 'light' | 'dark' = elección guardada del usuario. */

@@ -1,3 +1,5 @@
+/** Monta la demostración interactiva con sus rutas y controles. */
+
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router'
 import { AnimatePresence, motion } from 'framer-motion'

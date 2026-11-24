@@ -1,3 +1,5 @@
+/** Presenta la administración de proyectos de residencia. */
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,

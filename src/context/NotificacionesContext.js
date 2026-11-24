@@ -1,3 +1,5 @@
+/** Comparte el estado de avisos y las operaciones para actualizarlo en Expo. */
+
 import { createContext, useContext, useState, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
 import apiClient from "../utils/apiClient";

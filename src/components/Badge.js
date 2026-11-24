@@ -1,3 +1,5 @@
+/** Presenta una etiqueta breve para señalar un estado o categoría. */
+
 import { View, Text } from "react-native";
 
 export default function Badge({ text, color, bg }) {
