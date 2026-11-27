@@ -1,3 +1,5 @@
+/** Presenta a Vinculación las fuentes de proyecto y sus acciones de revisión. */
+
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,

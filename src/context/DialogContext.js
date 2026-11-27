@@ -1,3 +1,5 @@
+/** Centraliza los diálogos que las pantallas pueden abrir mediante un contexto de React. */
+
 /**
  * DialogContext — confirmaciones, avisos y mensajes dentro de la app.
  *

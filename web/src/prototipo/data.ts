@@ -1,3 +1,5 @@
+/** Contiene los datos ficticios que usa el prototipo. */
+
 /**
  * Datos de EJEMPLO para el prototipo. Nombres, empresas y proyectos vienen del seed
  * del backend (backend/seed.js). Fechas y estados son ilustrativos: el "hoy" del

@@ -1,3 +1,5 @@
+/** Consulta y actualiza avisos y gestiona las operaciones de notificación de cada rol. */
+
 const express = require("express");
 const db = require("../db");
 const { auth, requireRol } = require("../middleware");

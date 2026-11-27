@@ -1,3 +1,5 @@
+/** Presenta la primera entrega del residente y sus operaciones de archivo. */
+
 import { useState, useEffect } from "react";
 import {
   View,

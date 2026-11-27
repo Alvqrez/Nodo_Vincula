@@ -1,3 +1,5 @@
+/** Restaura y administra la sesión web y el intercambio del código de NODO. */
+
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { api, setToken, getToken } from './api'
 
@@ -22,6 +24,7 @@ const Ctx = createContext<{
 } | null>(null)
 
 /** Lee ?nodo_code= (entrada desde NODO) y lo borra de la dirección: no debe quedar en el historial. */
+// Se toma el código de la URL y se limpia de la barra antes de enviarlo al backend.
 function leerCodigoNodo() {
   try {
     const url = new URL(window.location.href)
@@ -33,6 +36,7 @@ function leerCodigoNodo() {
   } catch { return null }
 }
 
+// El proveedor mantiene un estado común de carga, sesión activa o acceso anónimo.
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [estado, setEstado] = useState<Estado>('cargando')
   const [usuario, setUsuario] = useState<Usuario | null>(null)

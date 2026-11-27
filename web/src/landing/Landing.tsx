@@ -1,3 +1,5 @@
+/** Ordena las secciones de la portada pública de Nodo Vincula. */
+
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react'
 import {
   ArrowRight, Bell, BookOpen, Buildings, CalendarCheck, ChartLineUp, ChatText, ClockCountdown, FileArrowUp,
@@ -71,6 +73,7 @@ const FRAGMENT: Record<RoleId, () => JSX.Element> = {
   residente: ResidenteFragment, asesor: AsesorFragment, vinculacion: VinculacionFragment,
 }
 
+// La selección del rol cambia la vista de ejemplo mostrada en esta sección.
 function ParaQuien() {
   const [rol, setRol] = useState<RoleId>('residente')
   const r = ROLES.find((x) => x.id === rol)!
@@ -227,6 +230,7 @@ function CapituloNodo() {
 }
 
 /* ── 6 · Preguntas: acordeón accesible ── */
+// Las preguntas frecuentes se presentan como controles que expanden y contraen la respuesta.
 function Preguntas() {
   const [abierta, setAbierta] = useState<number | null>(0)
   const base = useId()

@@ -1,3 +1,5 @@
+/** Presenta una cifra y su contexto como tarjeta de estadísticas. */
+
 import { View, Text } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";

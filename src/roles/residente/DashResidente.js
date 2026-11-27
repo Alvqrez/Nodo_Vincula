@@ -1,3 +1,5 @@
+/** Resume el proyecto, el avance y los avisos del residente. */
+
 import { useState, useEffect } from "react";
 import {
   View,

@@ -1,3 +1,5 @@
+/** Carga un conjunto pequeño de datos ficticios con dos residentes en un mismo proyecto. */
+
 /**
  * VinculaTec — seedVacia.js
  * Seed mínimo: 1 usuario por rol para pruebas rápidas.
@@ -163,7 +165,7 @@ async function seed() {
           "EMP-1",
           "ASE-3",
           r.horas,
-          480,
+          500,
           "2026-01-13",
           "2026-07-13",
           "activo",

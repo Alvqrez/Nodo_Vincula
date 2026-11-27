@@ -1,3 +1,5 @@
+/** Presenta el seguimiento de expedientes desde Vinculación. */
+
 import { useState, useMemo, useEffect } from "react";
 import {
   View,

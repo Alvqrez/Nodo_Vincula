@@ -1,3 +1,5 @@
+/** Presenta el formulario de inicio de sesión en el navegador. */
+
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { Eye, EyeSlash, GithubLogo, WarningCircle } from '@phosphor-icons/react'

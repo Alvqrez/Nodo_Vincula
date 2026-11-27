@@ -1,3 +1,5 @@
+/** Agrupa la carga y actualización de avisos de la cuenta en el cliente web. */
+
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { api } from './api'
 import { useSocketEvent } from './socket'

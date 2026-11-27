@@ -1,3 +1,5 @@
+/** Presenta la barra superior del cliente Expo. */
+
 import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";

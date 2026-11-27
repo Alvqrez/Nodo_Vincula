@@ -1,3 +1,5 @@
+/** Ofrece piezas compartidas para construir páginas, listas y estados de interfaz. */
+
 /**
  * Sistema de componentes de la app interna (concepto B "Expediente").
  * Toda pantalla nueva se arma con estas piezas: no se inventan estilos por pantalla.

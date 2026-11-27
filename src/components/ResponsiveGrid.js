@@ -1,3 +1,5 @@
+/** Distribuye elementos en una cuadrícula que se adapta al tamaño de pantalla. */
+
 import React from "react";
 import { View } from "react-native";
 import { useResponsive } from "../mobile/hooks/useResponsive";

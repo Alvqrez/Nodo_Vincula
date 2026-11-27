@@ -1,3 +1,5 @@
+/** Presenta un diálogo y ajusta su tamaño según la pantalla. */
+
 import React from "react";
     import {
         Modal,

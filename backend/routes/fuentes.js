@@ -1,3 +1,5 @@
+/** Gestiona las declaraciones del residente sobre el origen de su proyecto. */
+
 /**
  * Fuente del proyecto de residencia (lado del residente).
  * El residente declara de dónde proviene su proyecto (propuesta propia, banco
@@ -72,6 +74,7 @@ async function avisarJefes(io, { titulo, mensaje }) {
 }
 
 // ── GET /api/fuentes/mias ─────────────────────────────────────────────────────
+// El residente consulta aquí los datos y el estado de sus propias declaraciones.
 router.get("/mias", ...soloResidente, async (req, res) => {
   try {
     const residente = await obtenerResidente(req.user.id);

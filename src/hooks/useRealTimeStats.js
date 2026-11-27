@@ -1,3 +1,5 @@
+/** Actualiza estadísticas en respuesta a eventos en tiempo real. */
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import apiClient from "../utils/apiClient";
 

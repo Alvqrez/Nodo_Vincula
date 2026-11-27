@@ -1,3 +1,5 @@
+/** Ofrece avisos y confirmaciones compartidos mediante un proveedor de React. */
+
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle, Info, Warning, WarningCircle, X } from '@phosphor-icons/react'

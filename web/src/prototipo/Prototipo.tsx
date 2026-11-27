@@ -1,3 +1,5 @@
+/** Monta la demostración interactiva con sus rutas y controles. */
+
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -209,7 +211,7 @@ function AppFrame({ rol, children }: { rol: Rol; children: ReactNode }) {
   const avisos = m.items.find((i) => i.label === 'Avisos')?.badge ?? 0
   const movil = m.movil.map((l) => m.items.find((i) => i.label === l)!)
   return (
-    <div className="mx-auto grid max-w-[1440px] md:grid-cols-[248px_1fr]">
+    <div className="mx-auto grid max-w-[1440px] grid-cols-[minmax(0,1fr)] md:grid-cols-[248px_minmax(0,1fr)]">
       {/* Barra lateral: la pestaña activa entra en la hoja */}
       <aside className="sticky top-[57px] hidden h-[calc(100dvh-57px)] flex-col border-r border-rule bg-tray md:flex" aria-label="Navegación">
         <div className="px-5 pb-5 pt-6"><Lockup size="sm" /></div>

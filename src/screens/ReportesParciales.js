@@ -1,3 +1,5 @@
+/** Organiza los reportes parciales y sus estados en Expo. */
+
 import { useState, useRef, useEffect } from "react";
 import {
   View,

@@ -1,3 +1,5 @@
+/** Muestra la navegación lateral del cliente Expo. */
+
 import { useState, useRef, useEffect } from "react";
 import {
   View,

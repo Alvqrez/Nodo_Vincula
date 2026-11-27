@@ -1,3 +1,5 @@
+/** Centraliza el contenido reutilizado en las pantallas públicas y el prototipo. */
+
 /**
  * Contenido de NODO Vincula. Cada afirmación describe una función que existe hoy
  * en el sistema (ver la auditoría). Sin cifras, testimonios ni promesas inventadas.

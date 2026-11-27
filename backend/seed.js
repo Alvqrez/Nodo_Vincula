@@ -1,3 +1,5 @@
+/** Carga un conjunto amplio de datos ficticios para recorrer varios roles y expedientes. */
+
 /**
  * VinculaTec — seed.js
  * Pobla la base de datos con datos de prueba realistas para 2026.
@@ -374,7 +376,7 @@ async function seed() {
           eid,
           aid,
           horas,
-          480,
+          500,
           periodo.fecha_inicio,
           periodo.fecha_fin,
           "activo",

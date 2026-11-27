@@ -1,3 +1,5 @@
+/** Presenta las pantallas de ejemplo de los roles con escenarios seleccionables. */
+
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowUpRight, CalendarBlank, Check, FilePdf, FileDoc, Tray, UploadSimple, VideoCamera, MapPin } from '@phosphor-icons/react'
@@ -104,37 +106,37 @@ export function InicioResidente() {
     ? <>Tu asesor pidió cambios en el <b className="font-semibold text-ink">Parcial 2</b>. Corrígelo antes del <span className="font-mono text-ink">15 may</span>.</>
     : <>Tu <b className="font-semibold text-ink">Parcial 2</b> está en revisión. La siguiente entrega, el Parcial 3, vence el <span className="font-mono text-ink">5 de junio</span>.</>
   return (
-    <div className="grid gap-10">
-      <Encabezado saludo={`Buenos días, ${RESIDENTE.pila}.`} resumen={resumen}
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-10">
+      <Encabezado saludo="Mi residencia" resumen={resumen}
         extra={<Escenario valor={esc} onChange={setEsc} opciones={[{ id: 'revision', label: 'En revisión' }, { id: 'corregir', label: 'Por corregir' }, { id: 'cargando', label: 'Cargando' }]} />} />
-      <div className="grid gap-12 xl:grid-cols-[1.55fr_1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-12 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <Bloque titulo={`Tu expediente · ${PERIODO}`} accion={<span className="font-mono text-[11px] text-ink-3">{RESIDENTE.proyecto}</span>}>
-          {esc === 'cargando' ? <Esqueleto /> : (
+          {esc === 'cargando' ? <Esqueleto /> : (<>
+            <div className="grid gap-4 rounded-xl border border-rule bg-ground p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5">
+              <div>
+                <p className="text-sm text-ink-2">{esc === 'corregir' ? 'Corrección pendiente' : 'En revisión'}</p>
+                <p className="mt-1 text-lg font-medium">Parcial 2</p>
+                <p className="mt-1 text-sm text-ink-2">{esc === 'corregir' ? 'Fecha límite: 15 de mayo · PDF o DOCX, hasta 10 MB' : 'Tu asesor está revisando la entrega'}</p>
+              </div>
+              {esc === 'corregir' && <Button variant="signal" icon={UploadSimple}>Entregar corrección</Button>}
+            </div>
             <ol className="divide-y divide-rule">
               {reportes.map((r, i) => {
                 const e = ESTADO[r.estado]
                 return (
-                  <li key={r.nombre} className="grid grid-cols-[2rem_1fr_auto] items-center gap-x-4 gap-y-1 py-3.5 sm:grid-cols-[2rem_1fr_7rem_auto]">
+                  <li key={r.nombre} className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 py-4 sm:grid-cols-[2rem_minmax(0,1fr)_7rem_auto]">
                     <span className="font-mono text-[12px] text-ink-3">{String(i + 1).padStart(2, '0')}</span>
                     <div className="min-w-0">
                       <p className={`text-[15px] ${r.estado === 'bloqueado' ? 'text-ink-3' : 'font-medium'}`}>{r.nombre}</p>
                       <p className="text-[12.5px] text-ink-3">{r.estado === 'corregir' ? FEEDBACK_P2 : r.nota ?? e.help}</p>
                     </div>
                     <span className="hidden font-mono text-[12px] text-ink-2 sm:block">límite {r.limite}</span>
-                    <Seal tone={e.tone} stamped delay={i * 90}>{e.label}</Seal>
+                    <Seal tone={e.tone}>{e.label}</Seal>
                   </li>
                 )
               })}
             </ol>
-          )}
-          <div className="tick mt-2 grid gap-4 border border-rule bg-ground p-5 sm:grid-cols-[1fr_auto] sm:items-center">
-            <div>
-              <p className="font-mono text-[11px] uppercase tracking-[.16em] text-ink-3">{esc === 'corregir' ? 'Corrección pendiente' : 'Siguiente entrega'}</p>
-              <p className="mt-1 text-[17px] font-medium">{esc === 'corregir' ? 'Parcial 2' : 'Parcial 3'} · <span className="font-mono">{esc === 'corregir' ? '15 MAY 2026' : '05 JUN 2026'}</span></p>
-              <p className="mt-1 text-[13px] text-ink-2">PDF o DOCX, hasta 10 MB.</p>
-            </div>
-            <Button variant="signal" icon={UploadSimple}>{esc === 'corregir' ? 'Entregar corrección' : 'Ir a entregar'}</Button>
-          </div>
+          </>)}
         </Bloque>
         <div className="grid content-start gap-10">
           <Bloque titulo="Tu asesor">

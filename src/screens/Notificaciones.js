@@ -1,3 +1,5 @@
+/** Presenta la bandeja de avisos en Expo y sus acciones. */
+
 import { useState, useRef } from "react";
 import {
   View,

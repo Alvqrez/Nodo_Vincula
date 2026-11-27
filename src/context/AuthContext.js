@@ -1,3 +1,5 @@
+/** Gestiona el token de sesión y el acceso al almacenamiento según la plataforma. */
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Platform } from "react-native";
 
@@ -14,6 +16,7 @@ if (Platform.OS !== "web") {
 const AuthContext = createContext();
 
 // ── Storage helpers (compatibles con web y React Native) ───────────────────
+// La capa de almacenamiento elige el mecanismo de la plataforma y mantiene estable el resto del flujo de sesión.
 const storage = {
   getItem: async (key) => {
     // React Native: usar AsyncStorage
@@ -111,6 +114,7 @@ export function useAuth() {
 // ── Helpers de token (singleton sobre storage) ─────────────────────────────
 // Usados por App.js y DashAsesor.js directamente (sin contexto React)
 // NOTA: Ahora son async para soportar AsyncStorage en móvil
+// El token se guarda en memoria para las peticiones y en almacenamiento para el siguiente arranque.
 export async function setAuthToken(token) {
   tokenCache = token;
   if (token) {

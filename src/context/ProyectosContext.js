@@ -1,3 +1,5 @@
+/** Mantiene y distribuye la información de proyectos entre pantallas de Expo. */
+
 /**
  * ProyectosContext
  *

@@ -1,3 +1,5 @@
+/** Define códigos y utilidades compartidas para la validación y las respuestas de error. */
+
 /**
  * Sistema Centralizado de Códigos de Error
  * Proporciona códigos consistentes para todo el sistema

@@ -1,3 +1,5 @@
+/** Muestra indicadores de residencias correspondientes a un periodo. */
+
 import { useState, useEffect } from "react";
 import {
   View,

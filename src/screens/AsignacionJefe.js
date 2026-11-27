@@ -1,3 +1,5 @@
+/** Presenta el formulario de Vinculación para asignar proyectos a residentes. */
+
 import { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { Feather } from "@expo/vector-icons";

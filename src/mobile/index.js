@@ -1,3 +1,5 @@
+/** Reúne las exportaciones de la adaptación móvil. */
+
 // Mobile-specific components and hooks
 export { default as AdaptiveLayout } from "./components/AdaptiveLayout";
 export { default as MobileTopBar } from "./components/MobileTopBar";

@@ -1,3 +1,5 @@
+/** Presenta el encabezado y sus acciones en la interfaz móvil. */
+
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";

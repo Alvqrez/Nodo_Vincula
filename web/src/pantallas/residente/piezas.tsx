@@ -1,3 +1,5 @@
+/** Comparte piezas del expediente como la ruta, el folio y el selector de archivos. */
+
 /**
  * Piezas compartidas por las pantallas del residente: ruta de reportes,
  * zona de archivo (arrastrar y soltar) y el folio de un reporte con su entrega.
@@ -66,7 +68,7 @@ export function RutaReportes({ reportes, onSelect }: { reportes: Reporte[]; onSe
             <span className="hidden font-mono text-[13.5px] text-ink-2 sm:block">
               {r.fecha_limite ? <>límite {fechaCorta(r.fecha_limite)}</> : 'límite por definir'}
             </span>
-            <span className="justify-self-end"><ReportSeal estado={r.estado} stamped delay={i * 90} /></span>
+            <span className="justify-self-end"><ReportSeal estado={r.estado} /></span>
           </>
         )
         const cls = 'grid min-h-14 w-full grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 py-3.5 text-left transition-colors hover:bg-ink/[.03] sm:grid-cols-[2rem_minmax(0,1fr)_9rem_7.5rem]'

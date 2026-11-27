@@ -1,3 +1,5 @@
+/** Presenta la última entrega y su estado en el expediente del residente. */
+
 import { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { Feather } from "@expo/vector-icons";

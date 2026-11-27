@@ -1,3 +1,5 @@
+/** Presenta la agenda y las operaciones de citas en Expo. */
+
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,

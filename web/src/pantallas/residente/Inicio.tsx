@@ -1,3 +1,5 @@
+/** Resume el expediente y pone en primer plano la próxima entrega o decisión. */
+
 import type { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { CalendarBlank, CalendarPlus, EnvelopeSimple, FolderSimpleDashed, MapPin, Signature, UploadSimple, UserCircleDashed, VideoCamera } from '@phosphor-icons/react'
@@ -7,7 +9,6 @@ import { useUsuario } from '@/lib/session'
 import { plazo, useAsesor, useCitas, useFuente, useProyecto, useReportes, type Cita, type Fuente, type Reporte } from './reportes'
 import { RutaReportes, RutaSkeleton } from './piezas'
 
-const saludo = () => { const h = new Date().getHours(); return h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches' }
 const hoy = () => new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 const Mono = ({ children }: { children: ReactNode }) => <span className="font-mono text-ink">{children}</span>
 const B = ({ children }: { children: ReactNode }) => <b className="font-semibold text-ink">{children}</b>
@@ -38,19 +39,21 @@ function SiguienteAccion({ rs, sinAsesor }: { rs: Reporte[]; sinAsesor: boolean 
   const sig = rs.find((r) => r.estado === 'pendiente')
   const rev = rs.find((r) => r.estado === 'revision')
   const final = rs.find((r) => r.id === 'final')
+  // Una corrección pendiente tiene prioridad sobre una entrega nueva.
   const objetivo = corr ?? (sig && !(sinAsesor && sig.id === 'preliminar') ? sig : null)
   let ceja = 'Sin entregas abiertas', titulo: ReactNode = 'Esperando a tu asesor', nota = 'Te avisamos cuando se abra la siguiente entrega.'
   if (final?.estado === 'aceptado') { ceja = 'Residencia'; titulo = 'Entregas completas'; nota = 'Tu asesor aceptó los cinco reportes.' }
   else if (objetivo) {
     ceja = corr ? 'Corrección pendiente' : 'Siguiente entrega'
-    titulo = <>{objetivo.nombreLargo} · <span className="font-mono text-[16.5px]">{fechaCorta(objetivo.fecha_limite)?.toUpperCase() ?? 'SIN FECHA LÍMITE'}</span></>
-    nota = 'PDF o DOCX, hasta 10 MB.'
+    titulo = objetivo.nombreLargo
+    const fecha = fechaCorta(objetivo.fecha_limite)
+    nota = fecha ? `Fecha límite: ${fecha} · PDF o DOCX, hasta 10 MB` : 'Sin fecha límite · PDF o DOCX, hasta 10 MB'
   } else if (rev) { ceja = 'En revisión'; titulo = rev.nombreLargo; nota = 'Tu asesor lo está revisando. Te avisamos cuando lo haga.' }
   else if (sinAsesor) { ceja = 'Asignación pendiente'; titulo = 'Sin asesor asignado'; nota = 'Podrás entregar tu reporte preliminar cuando Vinculación te asigne asesor.' }
   return (
-    <div className="tick grid gap-4 border border-rule bg-ground p-5 sm:grid-cols-[1fr_auto] sm:items-center">
+    <div className="grid gap-4 rounded-xl border border-rule bg-ground p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5">
       <div>
-        <p className="font-mono text-[12.5px] uppercase tracking-[.1em] text-ink-3">{ceja}</p>
+        <p className="text-sm text-ink-2">{ceja}</p>
         <p className="mt-1 text-[18px] font-medium">{titulo}</p>
         <p className="mt-1 text-[14.5px] text-ink-2">{nota}</p>
       </div>
@@ -96,6 +99,7 @@ const LineasSkeleton = ({ n = 2 }: { n?: number }) => (
 
 export default function Inicio() {
   const u = useUsuario()
+  // Cada consulta mantiene su propio estado para que la pantalla pueda mostrar carga, error o datos.
   const rep = useReportes()
   const asesor = useAsesor()
   const proyecto = useProyecto()
@@ -108,7 +112,7 @@ export default function Inicio() {
 
   return (
     <div className="grid gap-10">
-      <PageHeader banda eyebrow={hoy()} title={`${saludo()}, ${u.nombre.split(' ')[0]}.`}
+      <PageHeader eyebrow={<span className="normal-case tracking-normal text-ink-2">{hoy()}</span>} title="Mi residencia"
         summary={rep.carga === 'cargando' || asesor.carga === 'cargando'
           ? <span className="grid gap-2 pt-1"><Skeleton className="h-4 w-[min(52ch,100%)]" /><Skeleton className="h-4 w-48" /></span>
           : rep.carga === 'error' ? 'No pudimos leer el estado de tus reportes.' : resumen(rep.reportes, sinAsesor)} />
@@ -118,7 +122,7 @@ export default function Inicio() {
           <Section title="Tu expediente" aside={rep.carga === 'listo' && <span className="font-mono text-[12.5px] text-ink-3">{aceptados}/5 aceptados</span>}>
             {rep.carga === 'cargando' ? <RutaSkeleton />
               : rep.carga === 'error' ? <ErrorState message={rep.error ?? 'No pudimos cargar tus reportes.'} onRetry={() => rep.recargar()} />
-              : <><RutaReportes reportes={rep.reportes} /><SiguienteAccion rs={rep.reportes} sinAsesor={sinAsesor} /></>}
+              : <><SiguienteAccion rs={rep.reportes} sinAsesor={sinAsesor} /><RutaReportes reportes={rep.reportes} /></>}
           </Section>
 
           <Section title="Mi proyecto">

@@ -1,3 +1,5 @@
+/** Presenta las operaciones administrativas de Vinculación sobre el sistema. */
+
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,

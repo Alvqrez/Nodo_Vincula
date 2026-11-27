@@ -1,3 +1,5 @@
+/** Aplica esquemas al cuerpo, parámetros y consulta de una petición antes de ejecutar su ruta. */
+
 /**
  * Middleware de Validación Unificado
  * Proporciona validación centralizada para endpoints
@@ -6,6 +8,7 @@
 const { createError, ERROR_CODES, validators } = require('../utils/errorCodes');
 
 // Middleware principal de validación
+// Cada ruta aporta un esquema con la forma esperada de body, params o query.
 const validateRequest = (schema) => {
   return (req, res, next) => {
     try {

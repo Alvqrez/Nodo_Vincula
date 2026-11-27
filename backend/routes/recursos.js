@@ -1,3 +1,5 @@
+/** Permite publicar documentos por audiencia y consultar o descargar los que corresponden a la cuenta. */
+
 /**
  * Biblioteca de recursos (guías, formatos y documentos oficiales).
  * El Jefe de Vinculación sube PDF/DOCX y elige a quién van dirigidos;
@@ -170,6 +172,7 @@ router.delete("/:id", ...soloJefe, async (req, res) => {
 });
 
 // ── GET /api/recursos/:id/archivo ─────────────────────────────────────────────
+// Antes de enviar un recurso se comprueba que la audiencia del documento incluya a la cuenta.
 router.get("/:id/archivo", auth, async (req, res) => {
   try {
     const [rows] = await db.execute(

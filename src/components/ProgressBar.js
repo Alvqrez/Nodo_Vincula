@@ -1,3 +1,5 @@
+/** Representa visualmente el porcentaje de avance. */
+
 import { View } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 export default function ProgressBar({ pct, color }) {

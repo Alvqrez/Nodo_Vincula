@@ -1,3 +1,5 @@
+/** Define controles, enlaces y elementos visuales reutilizados en varias pantallas. */
+
 import {
   useEffect, useId, useRef, useState,
   type ComponentType, type CSSProperties, type KeyboardEvent, type ReactNode,

@@ -1,3 +1,5 @@
+/** Expone las medidas y categorías de pantalla usadas por los componentes móviles. */
+
 import { useWindowDimensions } from "react-native";
 
 export const useResponsive = () => {

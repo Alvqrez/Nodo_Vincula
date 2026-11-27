@@ -1,3 +1,5 @@
+/** Configura Vite para React y resuelve el alias @ hacia el código fuente de la web. */
+
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'

@@ -1,3 +1,5 @@
+/** Concentra las peticiones autenticadas y las operaciones de archivos del cliente web. */
+
 /**
  * Cliente del backend de NODO Vincula (Express). Mismos endpoints y contratos que la app Expo.
  * Base: VITE_API_URL (raíz del servidor, sin /api). Por defecto, el backend local.
@@ -15,6 +17,7 @@ export function setToken(t: string | null) {
 
 export type ApiResult<T = Record<string, unknown>> = { ok: boolean; status: number; body: (T & { ok?: boolean; mensaje?: string }) | null; error?: string }
 
+// Aquí se agregan las cabeceras y se convierte la respuesta de Express en un resultado para la interfaz.
 async function request<T>(method: string, path: string, data?: unknown): Promise<ApiResult<T>> {
   const headers: Record<string, string> = {}
   if (data !== undefined) headers['Content-Type'] = 'application/json'
@@ -56,12 +59,17 @@ export function fileToDataUrl(file: File): Promise<string> {
 
 /** Abre un archivo protegido del backend (requiere el token): PDF en pestaña nueva, otros se descargan. */
 export async function abrirArchivo(ruta: string, nombre = 'archivo') {
-  const url = ruta.startsWith('http') ? ruta : `${API_ROOT}${ruta.startsWith('/') ? ruta : `/${ruta}`}`
+  const origenApi = new URL(API_ROOT || '/', window.location.origin).origin
+  const url = new URL(ruta.startsWith('http') ? ruta : `${API_ROOT}${ruta.startsWith('/') ? ruta : `/${ruta}`}`, window.location.origin)
   // La pestaña se abre antes del fetch para que el navegador no la bloquee.
   const win = window.open('', '_blank')
+  if (win) win.opener = null
   try {
-    const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-    if (!res.ok) throw new Error(res.status === 404 ? 'El archivo ya no está en el servidor.' : 'No pudimos abrir el archivo.')
+    // El token se agrega únicamente cuando el archivo se pide al origen configurado de la API.
+    const res = await fetch(url, { headers: token && url.origin === origenApi ? { Authorization: `Bearer ${token}` } : {} })
+    if (res.status === 401) throw new Error('Vuelve a iniciar sesión para abrir el archivo.')
+    if (res.status === 403 || res.status === 404) throw new Error('Este archivo no está disponible para tu cuenta.')
+    if (!res.ok) throw new Error('Intenta abrir el archivo de nuevo en unos minutos.')
     const blob = await res.blob()
     const obj = URL.createObjectURL(blob)
     if (blob.type === 'application/pdf' && win) { win.location.href = obj; return }

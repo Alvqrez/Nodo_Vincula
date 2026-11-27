@@ -1,3 +1,5 @@
+/** Configura el folio preliminar y presenta la orientación para la primera entrega. */
+
 import { ErrorState, PageHeader, Section, Skeleton } from '@/components/app'
 import { useAsesor, useProyecto, useReportes } from './reportes'
 import { Dato, FolioReporte, FolioSkeleton, Guia, resumenReporte } from './piezas'

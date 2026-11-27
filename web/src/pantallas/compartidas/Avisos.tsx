@@ -1,3 +1,5 @@
+/** Presenta la bandeja de avisos y las acciones sobre los mensajes de la cuenta. */
+
 /**
  * Avisos (antes "Notificaciones"). Mismo comportamiento que src/screens/Notificaciones.js:
  * pestañas por tipo con conteo, grupos por fecha, marca de no leído, marcar uno / todos,

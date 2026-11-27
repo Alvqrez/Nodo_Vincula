@@ -1,3 +1,5 @@
+/** Presenta el perfil, procesa la foto y ofrece las secciones disponibles para cada rol. */
+
 /**
  * Perfil (antes "Utilerías"). Mismo comportamiento que src/screens/Utilerias.js: foto de perfil
  * (comprimida en el navegador para el límite de 2 MB del backend), apariencia, biblioteca real de
@@ -53,6 +55,7 @@ function comprimirFoto(file: File): Promise<string> {
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
+      // La escala mantiene la proporción y limita el lado mayor a 400 píxeles.
       const s = Math.min(1, 400 / Math.max(img.width, img.height))
       const c = document.createElement('canvas')
       c.width = Math.round(img.width * s); c.height = Math.round(img.height * s)
@@ -60,6 +63,7 @@ function comprimirFoto(file: File): Promise<string> {
       if (!ctx) { URL.revokeObjectURL(url); reject(new Error('Tu navegador no pudo procesar la imagen.')); return }
       ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height) // PNG con transparencia → fondo blanco
       ctx.drawImage(img, 0, 0, c.width, c.height)
+      // Reducir la calidad por pasos intenta que el JPEG codificado quepa en el límite del campo.
       let q = 0.82
       let out = c.toDataURL('image/jpeg', q)
       while (out.length > MAX_FOTO_B64 && q > 0.35) { q -= 0.12; out = c.toDataURL('image/jpeg', q) }

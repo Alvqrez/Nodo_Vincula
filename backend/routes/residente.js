@@ -1,8 +1,11 @@
+/** Consulta el expediente del residente y registra entregas y retiros de archivos. */
+
 const express = require("express");
 const db = require("../db");
 const fs = require("fs");
 const path = require("path");
-const { auth } = require("../middleware");
+const { randomUUID } = require("node:crypto");
+const { auth, requireRol } = require("../middleware");
 
 const router = express.Router();
 
@@ -118,12 +121,14 @@ router.get("/reportes", auth, async (req, res) => {
 });
 
 // ── PUT /api/residente/reportes/:tipo ─────────────────────────────────────────
-router.put("/reportes/:tipo", auth, async (req, res) => {
+router.put("/reportes/:tipo", auth, requireRol("residente"), async (req, res) => {
   const tiposValidos = ["preliminar", "parcial1", "parcial2", "parcial3", "final"];
   const { tipo } = req.params;
   if (!tiposValidos.includes(tipo))
     return res.status(400).json({ ok: false, mensaje: "Tipo de reporte inválido." });
 
+  let archivoNuevo;
+  let commitIniciado = false;
   try {
     const [resRows] = await db.execute(
       "SELECT id FROM residentes WHERE usuario_id = ?",
@@ -134,11 +139,17 @@ router.put("/reportes/:tipo", auth, async (req, res) => {
 
     const residenteId = resRows[0].id;
     const today = new Date().toISOString().split("T")[0];
-    const { archivo, nombre_archivo, empresa } = req.body || {};
+    const { archivo, nombre_archivo } = req.body || {};
+
+    // El cliente usa null para retirar un reporte. Para entregarlo necesita los datos del archivo y su nombre.
+    const retirar = archivo === null;
+    if (!retirar && (typeof archivo !== "string" || !archivo || typeof nombre_archivo !== "string" || !nombre_archivo)) {
+      return res.status(400).json({ ok: false, mensaje: "Selecciona un archivo para entregar." });
+    }
 
     let archivoUrl = null;
 
-    if (archivo && nombre_archivo) {
+    if (!retirar) {
       // SEGURIDAD FIX #5: Validar extensión del archivo
       const extension = path.extname(nombre_archivo).toLowerCase();
       if (!EXTENSIONES_PERMITIDAS.includes(extension)) {
@@ -174,81 +185,97 @@ router.put("/reportes/:tipo", auth, async (req, res) => {
           });
         }
 
-        const nombreUnico = `${residenteId}_${tipo}_${Date.now()}${extension}`;
+        const nombreUnico = `${randomUUID()}${extension}`;
         const rutaArchivo = path.join(uploadsDir, nombreUnico);
-        fs.writeFileSync(rutaArchivo, buffer);
+        await fs.promises.writeFile(rutaArchivo, buffer, { flag: "wx" });
+        archivoNuevo = rutaArchivo;
         archivoUrl = `/uploads/${nombreUnico}`;
-        console.log(`[INFO] Archivo guardado: ${rutaArchivo}`);
       } catch (error) {
-        console.error(`[ERROR] Error al guardar archivo:`, error);
+        console.error("Error al guardar el reporte:", error);
+        return res.status(500).json({ ok: false, mensaje: "No se pudo guardar el archivo. Intenta de nuevo." });
       }
     }
 
-    const [existing] = await db.execute(
-      "SELECT id FROM reportes WHERE residente_id = ? AND tipo = ?",
-      [residenteId, tipo],
-    );
+    // El archivo ya está en disco. La transacción coordina el estado y la referencia que se guardan en MySQL.
+    const conexion = await db.getConnection();
+    try {
+      await conexion.beginTransaction();
+      // Serializa entregas del mismo residente, incluso cuando aún no existe el reporte.
+      const [residentes] = await conexion.execute(
+        "SELECT id FROM residentes WHERE id = ? AND usuario_id = ? FOR UPDATE",
+        [residenteId, req.user.id],
+      );
+      if (!residentes.length) {
+        throw new Error("El residente dejó de estar disponible.");
+      }
 
-    if (existing.length) {
-      if (archivo === null) {
-        await db.execute(
-          `UPDATE reportes SET estado = 'Pendiente', fecha_entrega = NULL, archivo_url = NULL, nombre_archivo = NULL
+      // Dentro del bloqueo se decide si ya existe el reporte de esta etapa o si se debe crear.
+      const [existing] = await conexion.execute(
+        "SELECT id FROM reportes WHERE residente_id = ? AND tipo = ?",
+        [residenteId, tipo],
+      );
+
+      if (retirar && !existing.length) {
+        await conexion.rollback();
+        return res.status(404).json({ ok: false, mensaje: "Reporte no encontrado." });
+      }
+
+      if (existing.length) {
+        await conexion.execute(
+          `UPDATE reportes SET estado = ?, fecha_entrega = ?, archivo_url = ?, nombre_archivo = ?
            WHERE residente_id = ? AND tipo = ?`,
-          [residenteId, tipo],
+          [retirar ? "Pendiente" : "En Revisión", retirar ? null : today, archivoUrl, retirar ? null : nombre_archivo, residenteId, tipo],
         );
       } else {
-        await db.execute(
-          `UPDATE reportes SET estado = 'En Revisión', fecha_entrega = ?, archivo_url = ?, nombre_archivo = ?
-           WHERE residente_id = ? AND tipo = ?`,
-          [today, archivoUrl || null, nombre_archivo || null, residenteId, tipo],
+        await conexion.execute(
+          `INSERT INTO reportes (id, residente_id, tipo, estado, fecha_entrega, archivo_url, nombre_archivo)
+           VALUES (?, ?, ?, 'En Revisión', ?, ?, ?)`,
+          [`r_${randomUUID()}`, residenteId, tipo, today, archivoUrl, nombre_archivo],
         );
       }
-    } else {
-      const tsShort = Date.now().toString().slice(-8);
-      const newId = `r_${residenteId}_${tipo}_${tsShort}`;
-      try {
-        await db.execute(
-          `INSERT INTO reportes (id, residente_id, tipo, estado, fecha_entrega, archivo_url, nombre_archivo)
-           VALUES (?,?,?,'En Revisión',?,?,?)`,
-          [newId, residenteId, tipo, today, archivoUrl || null, nombre_archivo || null],
+
+      commitIniciado = true;
+      await conexion.commit();
+    } catch (error) {
+      await conexion.rollback();
+      throw error;
+    } finally {
+      conexion.release();
+    }
+
+    // La notificación se intenta después de guardar el cambio para que el asesor pueda consultar el nuevo estado.
+    const io = req.app.get("io");
+    try {
+      if (io && !retirar) {
+        // Obtener asesor del residente para enviar notificación solo al asesor
+        const [asesorRows] = await db.execute(
+          `SELECT r.asesor_id, a.usuario_id AS asesor_usuario_id
+           FROM residentes r
+           JOIN asesores a ON a.id = r.asesor_id
+           WHERE r.id = ?`,
+          [residenteId]
         );
-      } catch (insertErr) {
-        if (insertErr.code === "ER_BAD_FIELD_ERROR" || String(insertErr).includes("nombre_archivo")) {
-          await db.execute(
-            `INSERT INTO reportes (id, residente_id, tipo, estado, fecha_entrega, archivo_url)
-             VALUES (?,?,?,'En Revisión',?,?)`,
-            [newId, residenteId, tipo, today, archivoUrl || null],
-          );
-        } else {
-          throw insertErr;
+
+        if (asesorRows.length > 0 && asesorRows[0].asesor_usuario_id) {
+          // Emitir solo al asesor, no al residente
+          io.to(`user_${asesorRows[0].asesor_usuario_id}`).emit("reporte_actualizado", {
+            residente_id: residenteId, tipo, estado: "En Revisión",
+            archivo_url: archivoUrl, nombre_archivo,
+          });
         }
       }
+    } catch (err) {
+      console.error("No se pudo avisar al asesor:", err);
     }
 
-    const io = req.app.get("io");
-    if (io) {
-      // Obtener asesor del residente para enviar notificación solo al asesor
-      const [asesorRows] = await db.execute(
-        `SELECT r.asesor_id, a.usuario_id AS asesor_usuario_id
-         FROM residentes r
-         JOIN asesores a ON a.id = r.asesor_id
-         WHERE r.id = ?`,
-        [residenteId]
-      );
-      
-      if (asesorRows.length > 0 && asesorRows[0].asesor_usuario_id) {
-        // Emitir solo al asesor, no al residente
-        io.to(`user_${asesorRows[0].asesor_usuario_id}`).emit("reporte_actualizado", {
-          residente_id: residenteId, tipo, estado: "En Revisión",
-          archivo_url: archivoUrl, nombre_archivo,
-        });
-      }
-    }
-
-    return res.json({ ok: true, archivo_url: archivoUrl, nombre_archivo });
+    return res.json({ ok: true, archivo_url: archivoUrl, nombre_archivo: retirar ? null : nombre_archivo });
   } catch (err) {
+    // Si se perdió la conexión al confirmar, el archivo podría estar ya referenciado.
+    if (archivoNuevo && !commitIniciado) {
+      await fs.promises.unlink(archivoNuevo).catch((error) => console.error("No se pudo limpiar el archivo:", error));
+    }
     console.error("Error en PUT /residente/reportes/:tipo:", err);
-    return res.status(500).json({ ok: false, mensaje: "Error interno: " + (err?.message || String(err)) });
+    return res.status(500).json({ ok: false, mensaje: "No pudimos actualizar el reporte. Intenta de nuevo." });
   }
 });
 

@@ -1,3 +1,5 @@
+/** Agrupa las rutas web de portada, acceso, aplicación y prototipo. */
+
 import { lazy, Suspense, useEffect } from 'react'
 import { Link, Route, Routes, useNavigate } from 'react-router'
 import { useSession } from '@/lib/session'

@@ -1,3 +1,5 @@
+/** Presenta los indicadores y el panorama de residencias para Vinculación. */
+
 import React, { useEffect, useState, useCallback } from "react";
 import {
   View,

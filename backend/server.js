@@ -1,9 +1,8 @@
+/** Arranca Express, conecta las rutas, configura CORS y enlaza Socket.IO al mismo servidor HTTP. */
+
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
-const path = require("path");
-const fs = require("fs");
-const jwt = require("jsonwebtoken");
 const { Server } = require("socket.io");
 const rateLimit = require("express-rate-limit");
 require("dotenv").config();
@@ -19,6 +18,10 @@ const reportesRoutes = require("./routes/reportes");
 const fuentesRoutes = require("./routes/fuentes");
 const recursosRoutes = require("./routes/recursos");
 
+const descargas = require("./routes/descargas");
+const { configurarSocketSesion } = require("./utils/socketSesion");
+
+// Express atiende las peticiones HTTP. El mismo servidor recibe las conexiones de Socket.IO.
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
@@ -37,6 +40,7 @@ const allowedOrigins = process.env.CORS_ORIGINS
       ]
     : [];
 
+// La configuración distingue los orígenes de desarrollo de los autorizados explícitamente en producción.
 function isOriginAllowed(origin) {
   if (!origin) return true; // Peticiones sin origin (móvil nativo, Postman)
   if (isDev) {
@@ -101,57 +105,21 @@ const authLimiter = rateLimit({
   },
 });
 
+// El acceso tiene un límite adicional al global porque recibe los intentos de inicio de sesión.
 app.use(globalLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/nodo", authLimiter);
 
-// ── Uploads protegidos con JWT ─────────────────────────────────────────────────
-app.get("/uploads/:filename", (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ ok: false, mensaje: "Sin token." });
-  }
-  try {
-    if (!process.env.JWT_SECRET) {
-      return res
-        .status(500)
-        .json({ ok: false, mensaje: "JWT_SECRET no configurado." });
-    }
-    jwt.verify(authHeader.split(" ")[1], process.env.JWT_SECRET);
-  } catch {
-    return res.status(401).json({ ok: false, mensaje: "Token inválido." });
-  }
+// Los documentos de residencia pasan por la ruta que verifica el acceso al expediente.
+app.use("/uploads", descargas);
 
-  const filename = path.basename(req.params.filename);
-  const filePath = path.join(__dirname, "uploads", filename);
+configurarSocketSesion(io);
 
-  if (!fs.existsSync(filePath)) {
-    return res
-      .status(404)
-      .json({ ok: false, mensaje: "Archivo no encontrado." });
-  }
-
-  res.sendFile(filePath);
-});
-
-// ── WebSockets ────────────────────────────────────────────────────────────────
-io.on("connection", (socket) => {
-  console.log(`[WebSocket] Cliente conectado: ${socket.id}`);
-
-  socket.on("join_room", ({ userId, rol }) => {
-    if (userId) socket.join(`user_${userId}`);
-    if (rol) socket.join(`role_${rol}`);
-    console.log(`[WebSocket] ${socket.id} → user_${userId} / role_${rol}`);
-  });
-
-  socket.on("disconnect", () => {
-    console.log(`[WebSocket] Cliente desconectado: ${socket.id}`);
-  });
-});
-
+// Las rutas recuperan esta instancia para emitir avisos después de guardar un cambio.
 app.set("io", io);
 
 // ── Rutas ─────────────────────────────────────────────────────────────────────
+// Cada prefijo dirige la petición al archivo que implementa ese conjunto de operaciones.
 app.use("/api/auth", authRoutes);
 app.use("/api/citas", citasRoutes);
 app.use("/api/asesor", asesorRoutes);
@@ -167,6 +135,7 @@ app.get("/api/health", (_, res) =>
   res.json({ ok: true, mensaje: "VinculaTec API corriendo 🚀" }),
 );
 
+// Con las rutas montadas, el proceso empieza a escuchar peticiones en el puerto configurado.
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`✅  Servidor corriendo en http://0.0.0.0:${PORT}`);
   console.log(`🌐  Modo: ${isDev ? "desarrollo" : "producción"}`);

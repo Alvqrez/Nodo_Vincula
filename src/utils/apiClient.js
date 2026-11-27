@@ -1,3 +1,5 @@
+/** Construye las peticiones del cliente Expo y agrega el token de sesión cuando corresponde. */
+
 import { getAuthToken } from "../context/AuthContext";
 import { API_BASE } from "../config/api";
 
@@ -8,12 +10,14 @@ const defaultHeaders = {
   "Content-Type": "application/json",
 };
 
+// El cliente recupera el token en cada llamada para usar la sesión actual.
 const buildHeaders = (headers = {}) => {
   const token = getAuthToken();
   const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
   return { ...defaultHeaders, ...authHeader, ...headers };
 };
 
+// La respuesta se transforma a datos para que las pantallas puedan manejar JSON y otros contenidos.
 const parseResponse = async (response) => {
   const text = await response.text();
   let body = null;
@@ -34,6 +38,7 @@ const createErrorPayload = ({ response, body }) => {
   return { ok: false, status: response?.status ?? 0, error, body };
 };
 
+// Las funciones get, post, put y delete comparten este envío y la forma de devolver los errores.
 const request = async (endpoint, config = {}) => {
   if (!BASE_URL) {
     return {

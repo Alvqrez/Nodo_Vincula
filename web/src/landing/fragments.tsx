@@ -1,3 +1,5 @@
+/** Proporciona fragmentos de interfaz y elementos gráficos para la portada. */
+
 /**
  * Fragmentos fieles de la interfaz de NODO Vincula, hechos en HTML/CSS.
  * Los nombres vienen de los datos de prueba del seed y van marcados como ejemplo:

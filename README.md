@@ -1,321 +1,129 @@
-<div align="center">
+# Nodo Vincula
 
-# 🎓 VinculaTec
+Aplicación de seguimiento de residencias profesionales del Instituto Tecnológico de Veracruz. El residente entrega reportes y consulta su avance. El asesor revisa las entregas de sus residentes asignados. Vinculación gestiona empresas, proyectos y asignaciones.
 
-**Sistema de Gestión de Residencias Profesionales**  
-Tecnológico Nacional de México — Departamento de Sistemas
+## Ver la demo
 
-[![React Native](https://img.shields.io/badge/React_Native-0.81-61DAFB?style=flat-square&logo=react)](https://reactnative.dev/)
-[![Expo](https://img.shields.io/badge/Expo-54-000020?style=flat-square&logo=expo)](https://expo.dev/)
-[![Node.js](https://img.shields.io/badge/Node.js-Express-339933?style=flat-square&logo=node.js)](https://nodejs.org/)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://mysql.com/)
-[![Socket.io](https://img.shields.io/badge/Socket.io-4.8-010101?style=flat-square&logo=socket.io)](https://socket.io/)
+En PowerShell, desde la raíz del repositorio:
 
-*Plataforma web/móvil para el seguimiento y gestión de residentes, asesores y proyectos de residencia profesional en tiempo real.*
-
-</div>
-
----
-
-## Descripción
-
-VinculaTec es una aplicación full-stack que digitaliza y centraliza el proceso de residencias profesionales del TecNM. Permite que los tres actores del proceso — **Residente**, **Asesor** y **Jefe de Vinculación** — interactúen desde una misma plataforma con roles y permisos diferenciados.
-
-### Funcionalidades principales
-
-- 📁 Entrega y seguimiento de reportes parciales y final
-- 💬 Retroalimentación del asesor con notificaciones en tiempo real
-- 🏢 Gestión de empresas y convenios de vinculación
-- 📊 Estadísticas y dashboards por rol y período
-- 📅 Calendario de citas y reuniones
-- 🔔 Sistema de notificaciones con WebSockets
-- 👤 Gestión de perfiles con foto de usuario
-
----
-
-## 🏗️ Arquitectura
-
-```
-VinculaTec/
-├── backend/               # API REST + WebSockets (Node.js + Express)
-│   ├── routes/            # Endpoints por rol (auth, asesor, jefe, residente...)
-│   ├── db.js              # Pool de conexiones MySQL
-│   ├── middleware.js       # JWT auth + verificación de roles
-│   ├── schema.sql         # Esquema de la base de datos
-│   ├── seed.js            # Datos de prueba
-│   └── server.js          # Punto de entrada
-│
-└── src/                   # Frontend (React Native + Expo)
-    ├── roles/
-    │   ├── asesor/        # App del Asesor
-    │   ├── jefe/          # App del Jefe de Vinculación
-    │   └── residente/     # App del Residente
-    ├── screens/           # Pantallas compartidas
-    ├── context/           # Estado global (Auth, Proyectos, Reportes...)
-    ├── components/        # Componentes reutilizables
-    └── config/api.js      # URL del backend (configurable por entorno)
+```powershell
+cd .\web
+npm.cmd ci
+npm.cmd run dev -- --host 127.0.0.1
 ```
 
----
+Abre la dirección que Vite muestra en `Local:` y añade `/prototipo/residente`. Puedes explorar «Mi residencia» y cambiar de escenario con datos ficticios. La demo funciona sin iniciar sesión ni configurar MySQL.
 
-##  Roles del sistema
+## Mapa del proyecto
 
-| Rol | Acceso | Funciones |
-|-----|--------|-----------|
-| **Residente** | Solo sus propios datos | Entrega de reportes, seguimiento de su proyecto, contacto con asesor |
-| **Asesor** | Solo sus residentes asignados | Revisión de reportes, feedback, solicitud de avance de fase |
-| **Jefe de Vinculación** | Vista global del departamento | Registro de usuarios, asignación de proyectos, gestión de empresas, estadísticas |
+| Ruta | Qué contiene |
+| --- | --- |
+| [web/](web/) | Cliente web con React, TypeScript y Vite. La pantalla «Mi residencia» destaca el siguiente paso del expediente. |
+| [App.js](App.js) y [src/](src/) | Cliente React Native con Expo 54. Incluye las vistas operativas de asesor y Vinculación. |
+| [backend/](backend/) | API Express, avisos mediante Socket.IO y conexión a MySQL con `mysql2`. |
+| [backend/schema.sql](backend/schema.sql) y [backend/migrations/](backend/migrations/) | Esquema inicial y cambios incrementales de la base. |
 
----
+La web tiene pantallas para entregas y seguimiento del residente, además de calendario, perfil y avisos. Los módulos principales de asesor y Vinculación siguen en rediseño en la web. Para probar esas operaciones, abre el cliente Expo.
 
-##  Instalación y configuración
+## Cómo leer el código
 
-### Prerrequisitos
+### Empieza por la acción que quieres entender
 
-- [Node.js](https://nodejs.org/) v18+
-- [MySQL](https://dev.mysql.com/downloads/mysql/) 8.0+
-- [Expo CLI](https://expo.dev/) (`npm install -g expo-cli`)
+| Acción | Flujo de lectura |
+| --- | --- |
+| Abrir la web | [web/index.html](web/index.html) → [main.tsx](web/src/main.tsx) → [App.tsx](web/src/App.tsx) → [AppRoutes.tsx](web/src/app/AppRoutes.tsx) |
+| Abrir Expo | [index.js](index.js) → [App.js](App.js) → [vistas por rol](src/roles/) |
+| Entrar con una cuenta en la web | [Acceso.tsx](web/src/app/Acceso.tsx) → [sesión web](web/src/lib/session.tsx) → [ruta de autenticación](backend/routes/auth.js) |
+| Entregar un reporte | [folio y selector de archivo](web/src/pantallas/residente/piezas.tsx) → [datos del expediente](web/src/pantallas/residente/reportes.tsx) → [ruta del residente](backend/routes/residente.js) |
+| Abrir un reporte | [cliente de archivos](web/src/lib/api.ts) → [descarga autorizada](backend/routes/descargas.js) → [conexión a MySQL](backend/db.js) y archivo guardado |
+| Recibir un aviso | [sesión de Socket.IO](backend/utils/socketSesion.js) → [notificación persistente](backend/utils/notificacionPersistente.js) → [avisos en la web](web/src/lib/notificaciones.tsx) |
 
----
+En la descarga, fíjate en las dos preguntas que hace el servidor. Primero valida la sesión para saber quién pide el archivo. Después consulta el expediente para comprobar si esa persona puede abrir ese reporte. Los comentarios al inicio de los archivos y junto a estos bloques sirven como puntos de referencia durante la lectura.
 
-### 1. Clonar el repositorio
+### Dónde buscar dentro de cada cliente
 
-```bash
-git clone https://github.com/TU_USUARIO/VinculaTec.git
-cd VinculaTec
+- **Expo** · [components/](src/components/) contiene las piezas reutilizables. [screens/](src/screens/) contiene pantallas completas. [roles/](src/roles/) organiza la navegación por cuenta. [context/](src/context/) comparte datos como la sesión y los reportes. [mobile/](src/mobile/) agrupa la adaptación para pantallas pequeñas.
+- **Web Vite** · [app/](web/src/app/) contiene el acceso, la navegación y las rutas autenticadas. [pantallas/](web/src/pantallas/) contiene las vistas. [lib/](web/src/lib/) reúne las peticiones y los datos compartidos. [landing/](web/src/landing/) es la portada y [prototipo/](web/src/prototipo/) es la demo con datos ficticios.
+- **Servidor** · [routes/](backend/routes/) define las operaciones HTTP. [middleware.js](backend/middleware.js) verifica sesión y rol. [middleware/](backend/middleware/) valida datos de entrada. [utils/](backend/utils/) comparte reglas y operaciones entre rutas. [test/](backend/test/) verifica comportamientos con datos simulados.
+- **Datos** · [schema.sql](backend/schema.sql) define las tablas iniciales. [migrations/](backend/migrations/) actualiza bases que ya existen. [seed.js](backend/seed.js) y [seedVacia.js](backend/seedVacia.js) cargan datos ficticios en una base preparada.
+
+### Configuración y carpetas locales
+
+| Archivo o carpeta | Papel en el proyecto |
+| --- | --- |
+| `package.json` y `package-lock.json` | Cada paquete declara sus comandos y dependencias en el primero. npm mantiene las versiones exactas en el segundo. Hay un par en la raíz, otro en `backend/` y otro en `web/`. |
+| `app.json` y `recursos_visuales/` | Expo lee en `app.json` los nombres y rutas del icono, la imagen de arranque y el favicon. Los archivos de imagen viven en `recursos_visuales/`. |
+| `babel.config.js` | Configura la transformación de Expo y la lectura de las variables permitidas a través de `@env`. |
+| `tsconfig.json` y `web/tsconfig.json` | La raíz hereda la configuración de Expo. La web define su revisión estricta y el alcance de archivos de TypeScript. |
+| `public/` y `web/public/` | La primera contiene el HTML de Expo Web. La segunda contiene recursos públicos de la web Vite. |
+| `node_modules/`, `logs/` y `backend/uploads/` | Contienen dependencias instaladas, registros del servidor y archivos subidos. Se generan o se llenan durante la instalación y el uso. |
+| `.gitignore` | Define qué archivos locales quedan fuera de Git, como variables de entorno, dependencias, logs y reportes subidos. |
+
+## Ejecutar el flujo completo
+
+Usa Node.js compatible con Expo 54 y MySQL 8.0. Prepara una instancia aislada de MySQL con datos ficticios. **El esquema inicial ejecuta `DROP DATABASE IF EXISTS vinculatec`.** Úsalo únicamente para preparar una instancia de prueba vacía.
+
+1. En `backend/.env`, configura la conexión y un secreto exclusivo de tu entorno:
+
+   ```dotenv
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_USER=usuario_local
+   DB_PASSWORD=contraseña_local
+   DB_NAME=vinculatec
+   JWT_SECRET=secreto_local_largo_y_aleatorio
+   PORT=3001
+   NODE_ENV=development
+   ```
+
+2. Desde `backend`, importa el esquema con una cuenta que pueda crear la base de laboratorio. Este comando se ejecuta en PowerShell y pide la contraseña de MySQL:
+
+   ```powershell
+   mysql -u root -p -e "source schema.sql"
+   ```
+
+   Ejecuta `npm.cmd ci` y luego `node seedVacia.js` una sola vez en esa base vacía para crear las cuentas ficticias. El encabezado de [seedVacia.js](backend/seedVacia.js) identifica las cuentas de laboratorio.
+
+3. Desde `backend`, ejecuta `npm.cmd start`. En otra terminal, `Invoke-RestMethod http://localhost:3001/api/health` comprueba que Express responde. Inicia sesión y guarda una entrega de prueba para comprobar también la conexión a MySQL.
+
+4. Para el residente, inicia Vite y abre `/acceso`. El cliente web apunta a `http://localhost:3001` en local. Para usar otro servidor, configura `VITE_API_URL` en `web/.env.local` con la URL base de la API.
+
+5. Para las operaciones de asesor y Vinculación, configura `REACT_APP_API_URL=http://localhost:3001/api` en el `.env.local` de la raíz. Desde ahí, ejecuta `npm.cmd ci` y `npm.cmd run web` para abrir el cliente Expo en el navegador.
+
+### Acceso mediante NODO
+
+La integración usa un código de un solo uso, que el backend canjea servidor a servidor. Configura `NODO_REDEEM_URL` y `VINCULA_SHARED_SECRET` en `backend/.env`. `NODO_INSTITUTION_ID` toma el valor `tecmx` por defecto. El residente debe estar registrado en Nodo Vincula. El acceso local con correo y contraseña está disponible sin esta integración.
+
+### Migraciones
+
+Para una base existente usa el ejecutor de migraciones desde `backend`:
+
+```powershell
+node migrations/run.js migrations/20261121_01_horas_residencia.sql
 ```
 
----
+Esta migración cambia a **500 horas** el valor predeterminado para las altas futuras. Los valores guardados se conservan. Revisa los expedientes existentes de 480 horas con la institución antes de modificarlos.
 
-### 2. Configurar el Backend
+## Seguimiento y acreditación
 
-```bash
-cd backend
-npm install
+La pantalla Seguimiento reúne los requisitos de inicio, la duración y la referencia al registro de la calificación oficial. Los estados de la app describen el expediente y sus entregas. La guía institucional aplicable a cada periodo define los formatos, las evaluaciones y el cierre. [Manual del TecNM, capítulo 12](https://regionllanos.tecnm.mx/archivos/Manual_de_Lineamientos_TecNM.pdf#page=85) · [Normateca del ITVER](https://www.veracruz.tecnm.mx/index.php/component/content/category/12-normateca)
+
+## Archivos, permisos y avisos
+
+- Las descargas de reportes verifican la cuenta activa y su acceso al expediente. Se permiten al residente titular, al asesor asignado y al rol de Jefatura de Vinculación.
+- Las fotos de perfil se pueden consultar desde la propia cuenta o desde la cuenta del asesor asignado al residente.
+- Socket.IO valida la sesión y asigna las salas en el servidor. Cierra la conexión cuando vence el token. El cliente web envía el token de descarga únicamente al origen de la API.
+- Los reportes admiten PDF y DOCX de hasta 10 MB. El backend valida la extensión y la firma inicial. Si falla el registro antes de confirmar la transacción, intenta limpiar el archivo nuevo.
+- Git excluye archivos de entorno, documentos subidos y logs locales. Para producción, configura los orígenes permitidos en `CORS_ORIGINS`.
+
+## Verificar cambios
+
+Desde la raíz, con las dependencias del backend instaladas:
+
+```powershell
+node --test backend/test/acceso.test.js
 ```
 
-Crea el archivo **`backend/.env`**:
+Desde `web`, ejecuta `npm.cmd run build`. Las pruebas automatizadas usan una base simulada. Para validar todo el circuito, usa MySQL de prueba y recorre entrega, descarga, corrección y reenvío con cuentas ficticias de cada rol.
 
-```env
-# Base de datos
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=tu_password
-DB_NAME=vinculatec
-
-# Autenticación JWT (usa una cadena larga y aleatoria)
-JWT_SECRET=tu_secreto_super_seguro_aqui
-
-# Servidor
-PORT=3001
-NODE_ENV=development
-```
-
-Crea la base de datos y tablas:
-
-```bash
-# Opción A — Script automático
-node sync-database.js
-
-# Opción B — Manual desde MySQL
-mysql -u root -p < schema.sql
-```
-
-*(Opcional)* Carga datos de prueba:
-
-```bash
-node seed.js
-```
-
-Inicia el servidor:
-
-```bash
-npm start          # producción
-npm run dev        # desarrollo con hot-reload (nodemon)
-```
-
-El servidor queda en `http://localhost:3001`. Verifica con:
-
-```bash
-curl http://localhost:3001/api/health
-# {"ok":true,"mensaje":"VinculaTec API corriendo 🚀"}
-```
-
----
-
-### 3. Configurar el Frontend
-
-Desde la raíz del proyecto:
-
-```bash
-npm install
-```
-
-Crea el archivo **`.env.local`** en la raíz:
-
-```env
-# URL del backend
-# Para pruebas en localhost (navegador en la misma máquina):
-REACT_APP_API_URL=http://localhost:3001/api
-
-# Para dispositivos físicos en la misma red Wi-Fi:
-# REACT_APP_API_URL=http://TU_IP_LOCAL:3001/api
-
-# Para acceso externo con ngrok:
-# REACT_APP_API_URL=https://xxxx.ngrok-free.app/api
-```
-
-> **¿Cómo saber tu IP local?**  
-> Windows: `ipconfig` → busca "Dirección IPv4"  
-> Mac/Linux: `ifconfig | grep "inet "`
-
-Inicia la app:
-
-```bash
-expo start          # Menú interactivo
-expo start --web    # Solo web (recomendado para demo)
-```
-
----
-
-## Demo con ngrok (múltiples dispositivos)
-
-Para demostrar el sistema en tiempo real con los 3 roles desde computadoras distintas:
-
-**1. Instala ngrok:** [ngrok.com/download](https://ngrok.com/download)
-
-**2. Expón el backend:**
-```bash
-ngrok http 3001
-# Forwarding  https://abc123.ngrok-free.app → localhost:3001
-```
-
-**3. En CADA computadora de la demo**, crea o actualiza `.env.local`:
-```env
-REACT_APP_API_URL=https://abc123.ngrok-free.app/api
-```
-
-**4. Reinicia Expo** en cada computadora:
-```bash
-expo start --web
-```
-
-> El backend ya tiene CORS configurado para aceptar dominios de ngrok.
-
----
-
-## Entrar con la cuenta de NODO
-
-Los residentes pueden entrar con su cuenta de NODO (mismo número de control). NODO emite un código de un solo
-uso (60 s) y el backend lo canjea servidor a servidor; el token de NODO nunca viaja en la dirección.
-Asesores y Jefatura siguen entrando con correo y contraseña. Si Vinculación no registró al residente, no entra.
-
-`backend/.env`:
-
-```env
-NODO_REDEEM_URL=https://jxpvprcapazklvfjctxx.supabase.co/functions/v1/vincula-redeem
-VINCULA_SHARED_SECRET=<el mismo secreto que en NODO, 32+ caracteres>
-NODO_INSTITUTION_ID=tecmx
-```
-
-`.env.local` (opcional; por defecto usa la URL pública de NODO):
-
-```env
-REACT_APP_NODO_URL=https://nodo-tecnologico.vercel.app
-```
-
-Sin estas variables, `POST /api/auth/nodo` responde 503 y el acceso con correo funciona igual.
-La parte de NODO (tabla, funciones `vincula-handoff` y `vincula-redeem`, página `/app/vincula`) está en el
-repositorio de NODO; ver su `supabase/README.md`.
-
-## Migraciones
-
-Los cambios de esquema posteriores a `schema.sql` están en `backend/migrations/` (idempotentes):
-
-```bash
-cd backend && node migrations/run.js migrations/<archivo>.sql
-```
-
-`schema.sql` ya los incluye para instalaciones nuevas. **Ojo:** `schema.sql` empieza con `DROP DATABASE`.
-
----
-
-## Esquema de la base de datos
-
-```
-usuarios          — Todos los usuarios del sistema (residente, asesor, jefe)
-residentes        — Perfil académico del residente (num_control, carrera, horas)
-asesores          — Perfil del asesor (departamento, num_empleado)
-jefes_vinculacion — Jefes del departamento
-empresas          — Empresas con convenio activo
-proyectos         — Proyectos de residencia (fases: propuesto→desarrollo→revisión→concluido)
-proyecto_asesores — Relación N:M proyectos-asesores
-reportes          — Reportes parciales y final (preliminar, parcial1-3, final)
-citas             — Citas y reuniones entre participantes
-notificaciones    — Historial de notificaciones
-fuentes_informacion — Fuentes declaradas por residentes
-```
-
----
-
-## API Endpoints principales
-
-| Método | Endpoint | Rol requerido | Descripción |
-|--------|----------|---------------|-------------|
-| `POST` | `/api/auth/login` | — | Inicio de sesión |
-| `GET` | `/api/auth/me` | Cualquiera | Datos del usuario actual |
-| `GET` | `/api/asesor/dashboard` | asesor | Stats del asesor |
-| `GET` | `/api/asesor/proyectos` | asesor | Proyectos con residentes y reportes |
-| `PUT` | `/api/asesor/reportes/:id/revisar` | asesor | Aprobar/rechazar reporte |
-| `GET` | `/api/residente/reportes` | residente | Reportes del residente |
-| `PUT` | `/api/residente/reportes/:tipo` | residente | Subir reporte |
-| `GET` | `/api/jefe/dashboard` | jefe | Stats globales |
-| `POST` | `/api/jefe/registrar-usuario` | jefe | Crear residente o asesor |
-| `POST` | `/api/jefe/asignacion` | jefe | Crear proyecto y asignar |
-| `GET` | `/api/jefe/grafica-reportes` | jefe | Datos para gráfica circular |
-
----
-
-## Seguridad implementada
-
-- **JWT** con expiración de 8 horas y secreto por variable de entorno
-- **Middleware de roles** — cada ruta valida `rol` del token antes de ejecutarse
-- **Aislamiento por asesor** — queries filtradas por `asesor_id` del token, no por parámetro URL
-- **Rate limiting** — 200 req/15min global, 10 intentos de login/15min por IP
-- **Validación de archivos** — extensión + magic bytes (PDF y DOCX únicamente)
-- **Tamaño máximo** de archivos: 10 MB
-- **Sanitización de rutas** en `path.basename()` para prevenir path traversal
-- **CORS** restringido por ambiente (solo orígenes explícitos en producción)
-
----
-
-## Tecnologías
-
-**Frontend**
-- React Native 0.81 + Expo 54
-- Socket.io Client (tiempo real)
-- react-native-chart-kit (gráficas)
-- react-native-svg
-- @expo/vector-icons (Feather)
-- @expo-google-fonts/sora
-
-**Backend**
-- Node.js + Express 4
-- MySQL 2 (promise-based pool)
-- Socket.io 4.8 (WebSockets)
-- JSON Web Tokens (jsonwebtoken)
-- bcryptjs (hashing de contraseñas)
-- express-rate-limit
-
----
-
-## 👨‍💻 Equipo de desarrollo
-
-Proyecto desarrollado como proyecto escolar para el **Tecnológico Nacional de México**.
-
----
-
-## 📄 Licencia
-
-Este proyecto es de uso académico interno del Departamento de Sistemas del TecNM.
+Proyecto de uso académico interno del Departamento de Sistemas del TecNM. Pulido editorial con [Unslop, de Damir Sokolovsky](https://heydamir.design/unslop).

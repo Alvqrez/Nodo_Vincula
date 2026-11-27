@@ -1,3 +1,5 @@
+/** Comparte el tema visual y los cambios de apariencia en Expo. */
+
 /*import { createContext, useContext, useState, useEffect } from "react";
 
 

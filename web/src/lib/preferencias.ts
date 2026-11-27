@@ -1,3 +1,5 @@
+/** Almacena y comparte la preferencia de navegación de la interfaz web. */
+
 import { useSyncExternalStore } from 'react'
 
 /** Dónde vive la navegación en escritorio. Se recuerda por navegador; en celular siempre es la barra inferior. */

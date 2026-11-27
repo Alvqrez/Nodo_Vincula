@@ -1,3 +1,5 @@
+/** Agrupa elementos en una fila reutilizable. */
+
 import React from "react";
 import { View } from "react-native";
 

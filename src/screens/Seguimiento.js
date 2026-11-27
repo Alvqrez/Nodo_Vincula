@@ -1,3 +1,5 @@
+/** Resume los reportes y su avance desde el expediente del residente. */
+
 import { useState } from "react";
 import {
   Modal,

@@ -1,3 +1,5 @@
+/** Mantiene las entregas y calcula qué etapas se pueden consultar o entregar. */
+
 import {
   createContext,
   useContext,
@@ -97,6 +99,7 @@ const INITIAL_REPORTS = [
   },
 ];
 
+// A partir de los estados de las entregas, calcula qué etapas se habilitan en el expediente.
 function derivarDesbloqueados(reports) {
   const set = new Set();
   const prelim = reports.find((r) => r.id === "preliminar");
@@ -110,6 +113,7 @@ function derivarDesbloqueados(reports) {
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
+// El contexto comparte los reportes entre las pantallas que muestran o modifican el expediente.
 export function ReportesProvider({ children }) {
   const [reports, setReports] = useState(INITIAL_REPORTS);
   const [parcialesDesbloqueados, setParcialesDesbloqueados] = useState(() =>

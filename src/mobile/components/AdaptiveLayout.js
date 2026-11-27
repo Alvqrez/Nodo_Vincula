@@ -1,3 +1,5 @@
+/** Agrupa el contenido y la navegación de la adaptación móvil. */
+
 import { View, Platform, Animated, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";

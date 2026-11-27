@@ -1,3 +1,5 @@
+/** Define la navegación disponible según el rol de la cuenta. */
+
 import type { ComponentType } from 'react'
 import {
   Bell, Briefcase, Buildings, CalendarBlank, ChartBar, Checks, FileText, Folder, House, Signature,
